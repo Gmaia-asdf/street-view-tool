@@ -13,7 +13,7 @@ var CheckPano = [];
 var Markers = [];
 var aux = [];
 var rMap;
-var json;
+var json = [];
 var sv;
 var pntimes = [];
 var markerPanoID = [];
@@ -21,7 +21,10 @@ var psize = 0;
 var State = new Array(2);
 var Calibration = new Array();
 let popupOriginal
-let popupDoc  
+let popupDoc
+let loca
+let elevator
+var hc = []
 
 var SVO = new Object;
 
@@ -122,7 +125,8 @@ async function initMap() {
         enableCloseButton: true,
         imageDateControl: false,
         disableDefaultUI: true,
-
+        zoomControlOptions: false,
+        zoomControl: false,
     });
     rPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-Down'))
     rPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-Up'))
@@ -141,12 +145,13 @@ async function initMap() {
         enableCloseButton: true,
         imageDateControl: true,
         disableDefaultUI: true,
+        zoomControlOptions: true,
+        zoomOptions: false,
     });
     pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-point'));
-    
-    pPanorama.controls[google.maps.ControlPosition.TOP_RIGHT].push(document.getElementById('floating-point2'));
-        pPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('file_input'));
 
+    pPanorama.controls[google.maps.ControlPosition.TOP_RIGHT].push(document.getElementById('floating-point2'));
+    pPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('file_input'));
 
     // pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('input-match'));
     rPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('floating-ruler2'));
@@ -235,6 +240,11 @@ async function initMap() {
         capture: true
     }, );
 
+    // Cria a instância da ElevationService
+    elevator = new google.maps.ElevationService();
+
+    // Chama a função para obter a elevação
+
 }
 
 function setMapOnAll(map, Markers) {
@@ -311,6 +321,8 @@ function toggleDown() {
     if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
         setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
+
+    
 }
 
 function toggleUp() {
@@ -375,6 +387,8 @@ function toggleUp() {
     if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
         setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
+
+
 }
 
 function processSVData(data, status) {
@@ -435,18 +449,10 @@ function processSVData(data, status) {
 
             checkpoint.addListener('click', function() {
                 markerPanoID = data.location.pano;
-
+                
+                                
                 if (rPanorama.pano != markerPanoID) {
-                    if (Markers[rPanorama.pano]) {
-                        setMapOnAll(null, Markers[rPanorama.pano].Points);
-                        // setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                        setMapOnAll(null, Markers[rPanorama.pano].Matches);
-                    }
-                    if (Markers[pPanorama.pano]) {
-                        setMapOnAll(null, Markers[pPanorama.pano].Points);
-                        //setMapOnAll(null, Markers[pPanorama.pano].Pairs);
-                        // setMapOnAll(null, Markers[pPanorama.pano].Matches);
-                    }
+
                     if (ntimes.length != 0) {
                         Pano = Object.values(rPanoramas[ntimes])[1];
                         aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
@@ -521,10 +527,23 @@ function processSVData(data, status) {
                         //setMapOnAll(pMap, Markers[pPanorama.pano].Matches);
                     }
                 }
+                if (Markers[rPanorama.pano]) {
+                    setMapOnAll(null, Markers[rPanorama.pano].Points);
+                    // setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                    setMapOnAll(null, Markers[rPanorama.pano].Matches);
+                }
+                if (Markers[pPanorama.pano]) {
+                    setMapOnAll(null, Markers[pPanorama.pano].Points);
+                    //setMapOnAll(null, Markers[pPanorama.pano].Pairs);
+                    // setMapOnAll(null, Markers[pPanorama.pano].Matches);
+                }
+
+                            
             });
 
             pcheckpoint.addListener('click', function() {
                 var markerPanoID = data.location.pano;
+
                 if (rPanorama.pano != markerPanoID) {
                     if (Markers[pPanorama.pano]) {
                         setMapOnAll(null, Markers[pPanorama.pano].Points);
@@ -546,6 +565,8 @@ function processSVData(data, status) {
                             pPanoramas = data.time
                             pPanorama.setPano(Object.values(pPanoramas[pntimes])[0])
                             pPanorama.setVisible(true);
+
+                           
                         }
                     } else {
                         pPanorama.setPano(markerPanoID);
@@ -871,6 +892,8 @@ function cartesian(lat2, lon2) {
     a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(0 * dLon / 2) * Math.sin(0 * dLon / 2);
     c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     var y = R * c * 1000 * Math.sign(dLat);
+    var d = distance(lat1, lon1, lat2, lon2)
+    //x= (x && x/Math.abs(x))*Math.sqrt(Math.pow(d,2)-Math.pow(y,2))  
     return [x, y];
 }
 
@@ -896,7 +919,6 @@ function distanceC(point1, point2, Cal) {
     H = Cal.cal
 
     Nv1 = Cal.N1
-
     Nv2 = Cal.N2;
 
     for (ii = 0; ii < 2; ii++) {
@@ -944,13 +966,32 @@ function distance(lat1, lon1, lat2, lon2) {
     var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     var d = R * c;
-    if (d > 1)
-        return Math.round(d) + "km";
-    else if (d <= 1)
-        return parseFloat(1000 * d).toFixed(2) + ' m';
+    return d * 1000
+    //  if (d > 1)
+    //   return Math.round(d) + "km";
+    // else if (d <= 1)
+    //     return parseFloat(1000 * d).toFixed(2) + ' m';
 }
 
 function distanceGoogle(point1, point2) {
     var d = google.maps.geometry.spherical.computeDistanceBetween(point1.position, point2.position);
     return parseFloat(d).toFixed(2);
+}
+
+function LocationElevation(location, elevator) {
+    return elevator.getElevationForLocations({
+        locations: [location]
+    }).then( ({results}) => {
+        if (results[0]) {
+            return results[0].elevation;
+            // Retorna a elevação
+        } else {
+            throw new Error("No results found");
+        }
+    }
+    ).catch( (error) => {
+        console.error("Elevation service failed due to:", error);
+        return null;
+    }
+    );
 }

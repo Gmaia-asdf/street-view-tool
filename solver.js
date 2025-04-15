@@ -47,12 +47,12 @@ function solverH(child) {
             var resultThisDatum = funcao(params, child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
             var delta = resultThisDatum;
             total += delta
+            console.log(total)
         }
         return total;
     };
 
     var initial = [0, 0];
-
     var minimiser1 = numeric.uncmin(objective1, initial)
     var minimiser2 = numeric.uncmin(objective2, initial)
     var minimiser = minimiser1.solution
@@ -60,7 +60,6 @@ function solverH(child) {
     minimiser.push(minimiser2.solution[1])
 
     minimiser.push(Math.sqrt(((minimiser1.f) + (minimiser2.f))) / (child.length / 2 - 1))
-    console.log(minimiser)
     var tot = 0.0;
     var tot2 = 0.0;
     var totd = 0.0;
@@ -106,18 +105,28 @@ function solverP(child1,child2) {
             var delta = resultThisDatum1+resultThisDatum2;
         return delta;
     };
-
+    
  
     var initial = [0, 0];
 
     var minimiser1 = numeric.uncmin(objective1, initial)
     var minimiser = minimiser1.solution
-    var tot = 0.0;
+
     
-    var resl1 = Math.sqrt((minimiser[0] - child1.cPosition[0]) * (minimiser[0] - child1.cPosition[0]) + (minimiser[1] - child1.cPosition[1]) * (minimiser[1] - child1.cPosition[1])) * (Math.tan(child1.spitch * Math.PI / 180));      
-    var resl2= Math.sqrt((minimiser[0] - child2.cPosition[0]) * (minimiser[0] - child2.cPosition[0]) + (minimiser[1] - child2.cPosition[1]) * (minimiser[1] - child2.cPosition[1])) * (Math.tan(child2.spitch * Math.PI / 180));
+    // LocationElevation(child1.gPosition,elevator).then((result) => {
+     // hc1 = result;
+    //});
+
+   // LocationElevation(child2.gPosition,elevator).then((result) => {
+     // hc2 = result;
+    //});
+    
+    var resl1=Math.sqrt((minimiser[0] - child1.cPosition[0]) * (minimiser[0] - child1.cPosition[0]) + (minimiser[1] - child1.cPosition[1]) * (minimiser[1] - child1.cPosition[1])) * (Math.tan(child1.spitch * Math.PI / 180));      
+    var resl2=Math.sqrt((minimiser[0] - child2.cPosition[0]) * (minimiser[0] - child2.cPosition[0]) + (minimiser[1] - child2.cPosition[1]) * (minimiser[1] - child2.cPosition[1])) * (Math.tan(child2.spitch * Math.PI / 180));
     minimiser.push(resl1)
     minimiser.push(resl2)
+
+
   
     var sol = minimiser
     return sol
@@ -158,3 +167,5 @@ function solverC(point, Cal) {
 
     return minimiser.solution
 }
+
+

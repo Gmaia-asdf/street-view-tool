@@ -3,18 +3,18 @@
 adcElemento = function() {
     var Panorama = rPanorama;
     var name = []
-    const rul = [" B: Base", "A: Altura"]
+    const rul = ["topo/fim", "base"]
 
     name[0] = Panorama.getPano() + "A"
     name[1] = Panorama.getPano() + "B"
 
-    if (Panorama.__gm.panes.overlayLayer.children[name[1]] == undefined) {
+    if (Panorama.__gm.panes.overlayLayer.children[name[1]] == undefined || Math.abs(rPanorama.__gm.panes.overlayLayer.children.length % 2)==1 ) {
         SVO.panWidth = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
         SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
         SVO.markerWidth = 18;
         SVO.markerHeight = 18;
 
-        if (Panorama.__gm.panes.overlayLayer.children.length == 0) {
+        if (!eid("centroR")) {
             var divNova = document.createElement("i");
             divNova.id = "centroR"
             divNova.style.position = "absolute"
@@ -23,28 +23,33 @@ adcElemento = function() {
             divNova.style.fontSize = SVO.markerWidth + "px"
             divNova.style.color = "red"
             divNova.classList.add('fa', 'fa-plus-circle')
-
             Panorama.__gm.panes.overlayImage.appendChild(divNova)
         }
+        else {
 
-        for (ii = 0; ii < 2; ii++) {
+        if (Panorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "A"]==undefined)
+        {ii=0} 
+        if (Panorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "B"]==undefined)
+        {ii=1}
+        
+                
             var divNova = document.createElement("i");
             divNova.id = name[ii]
             divNova.style.position = "absolute"
             divNova.style.top = (SVO.panHeight - SVO.markerHeight) / 2 + "px"
             divNova.style.left = (SVO.panWidth - SVO.markerWidth) / 2 + "px"
             divNova.style.fontSize = SVO.markerWidth + "px"
-            divNova.style.color = "red"
+            divNova.style.color = "red"    
+            
             divNova.sheading = Panorama.getPov().heading;
             divNova.spitch = Panorama.getPov().pitch;
             divNova.cPosition = cartesian(Panorama.position.lat(), Panorama.position.lng())
             divNova.classList.add('fa', 'fa-dot-circle-o')
             var conteudoNovo = document.createTextNode(rul[ii]);
             divNova.appendChild(conteudoNovo);
-
             Panorama.__gm.panes.overlayLayer.appendChild(divNova);
             dragElement(eid(name[ii]));
-        }
+        
 
         Panorama.addListener('zoom_changed', function() {
             SVO.panWidth = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
@@ -52,7 +57,6 @@ adcElemento = function() {
             if ((this.__gm.panes.overlayLayer.children[this.getPano() + "A"])) {
                 m_updateMarker(eid(this.getPano() + "A"), this.getPov())
                 m_updateMarker(eid(this.getPano() + "B"), this.getPov())
-
             }
         });
 
@@ -61,6 +65,8 @@ adcElemento = function() {
             SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
             if ((this.__gm.panes.overlayLayer.children[this.getPano() + "A"])) {
                 m_updateMarker(eid(this.getPano() + "A"), this.getPov())
+            }
+            if ((this.__gm.panes.overlayLayer.children[this.getPano() + "B"])) {
                 m_updateMarker(eid(this.getPano() + "B"), this.getPov())
             }
         });
@@ -70,15 +76,20 @@ adcElemento = function() {
             SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
             if ((this.__gm.panes.overlayLayer.children[this.getPano() + "A"])) {
                 m_updateMarker(eid(this.getPano() + "A"), this.getPov())
+            }
+             if ((this.__gm.panes.overlayLayer.children[this.getPano() + "B"])) {
                 m_updateMarker(eid(this.getPano() + "B"), this.getPov())
             }
         });
 
         Panorama.addListener('pano_changed', function() {
+            let ii
             SVO.panWidth = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
             SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
             if ((this.__gm.panes.overlayLayer.children[this.getPano() + "A"])) {
                 m_updateMarker(eid(this.getPano() + "A"), this.getPov())
+            }
+            if ((this.__gm.panes.overlayLayer.children[this.getPano() + "B"])) {
                 m_updateMarker(eid(this.getPano() + "B"), this.getPov())
             }
             if (this.__gm.panes.overlayLayer.children.length > 0) {
@@ -87,7 +98,7 @@ adcElemento = function() {
                     this.__gm.panes.overlayLayer.children[2 * kk + 1].style.display = this.getPano() + "B" == this.__gm.panes.overlayLayer.children[2 * kk + 1] ? "block" : "none";
                 }
             }
-        });
+        });}
     } else {
         Panorama.__gm.panes.overlayLayer.children[name[1]].remove();
         Panorama.__gm.panes.overlayLayer.children[name[0]].remove();
@@ -95,10 +106,22 @@ adcElemento = function() {
 }
 
 adcElementoC = function() {
+    
     var oPanorama = []
     numb = String(rPanorama.__gm.panes.overlayLayer.children.length)
     oPanorama[0] = rPanorama;
     oPanorama[1] = pPanorama;
+
+    if (rPanorama.location && hc[rPanorama.pano]==undefined) {
+    LocationElevation(rPanorama.location.latLng, elevator).then( (result) => {
+    hc[rPanorama.pano] = result;
+    });}   
+
+    if (pPanorama.location && hc[pPanorama.pano]==undefined) {
+    LocationElevation(pPanorama.location.latLng, elevator).then( (result) => {
+    hc[pPanorama.pano] = result;
+    });}
+   
     SVO.panWidth = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
     SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
     SVO.markerWidth = 18;
@@ -132,7 +155,9 @@ adcElementoC = function() {
 
             var rul = []
             Panorama = oPanorama[ii];
-
+            
+                 
+            
             rul[0] = "A" + numb
             rul[1] = "B" + numb
             name = Panorama.getPano() + rul[ii]
@@ -160,9 +185,12 @@ adcElementoC = function() {
             divNova.style.left = (SVO.panWidth - SVO.markerWidth) / 2 + "px"
             divNova.style.fontSize = SVO.markerWidth + "px"
             divNova.style.color = "red"
+            divNova.elevation=hc[ii]
+            
             divNova.sheading = Panorama.getPov().heading;
             divNova.spitch = Panorama.getPov().pitch;
             divNova.cPosition = cartesian(Panorama.position.lat(), Panorama.position.lng())
+            divNova.gPosition=Panorama.position
             divNova.classList.add('fa', 'fa-dot-circle-o')
             var conteudoNovo = document.createTextNode(rul[ii]);
             divNova.appendChild(conteudoNovo);
@@ -229,9 +257,8 @@ adcElementoC = function() {
                     }
                 }
                 if (this.__gm.panes.overlayLayer.children.length > 0) {
-                    for (kk = 0; kk < this.__gm.panes.overlayLayer.children.length / 2; kk++) {
-                        this.__gm.panes.overlayLayer.children[2 * kk].style.display = this.getPano() == this.__gm.panes.overlayLayer.children[2 * kk] ? "block" : "none";
-                        this.__gm.panes.overlayLayer.children[2 * kk + 1].style.display = this.getPano() == this.__gm.panes.overlayLayer.children[2 * kk + 1] ? "block" : "none";
+                    for (kk = 0; kk < this.__gm.panes.overlayLayer.children.length; kk++) {
+                        this.__gm.panes.overlayLayer.children[kk].style.display = this.getPano() == this.__gm.panes.overlayLayer.children[2 * kk] ? "block" : "none";
                     }
                 }
             });
@@ -312,7 +339,7 @@ dragElement = function(elmnt) {
         elmnt.sheading = l_pov.heading + Math.atan(l_diffHeading / l_fovAngle) * 180 / Math.PI;
         elmnt.spitch = l_pov.pitch - Math.atan(l_diffPitch / l_fovAngle) * 180 / Math.PI;
 
-        if (rPanorama.__gm.panes.overlayLayer.children.length > 2 && !popupOriginal) {
+        if (rPanorama.__gm.panes.overlayLayer.children.length > 2 && !popupOriginal && Math.abs(rPanorama.__gm.panes.overlayLayer.children.length % 2)==0 ) {
             slt = solverH(rPanorama.__gm.panes.overlayLayer.children);
             for (ii = 0; ii < rPanorama.__gm.panes.overlayLayer.children.length / 2; ii++) {
                 rPanorama.__gm.panes.overlayLayer.children[2 * ii].innerText = '0 [cm] ';
@@ -328,17 +355,29 @@ dragElement = function(elmnt) {
             }
         }else{
 
+            
 
-           console.log(solverP(rPanorama.__gm.panes.overlayLayer.children[0],pPanorama.__gm.panes.overlayLayer.children[0]))
         }
     }
     function closeDragElement() {
         // stop moving when mouse button is released:
         document.onmouseup = null;
         document.onmousemove = null;
+        
+        
+        
         if (popupOriginal) {
             popupOriginal.document.onmouseup = null;
             popupOriginal.document.onmousemove = null;
+
+            for (let kk = 0; kk < rPanorama.__gm.panes.overlayLayer.children.length ; kk++) {
+            var loc=solverP(rPanorama.__gm.panes.overlayLayer.children[kk],pPanorama.__gm.panes.overlayLayer.children[kk])
+            var uu=parseInt(popupOriginal.document.getElementById("image-original").children[kk+1].style.left)
+            var vv=parseInt(popupOriginal.document.getElementById("image-original").children[kk+1].style.top)
+                
+            json[0,kk]=[loc[0],loc[1],loc[2],loc[3]]
+            //json[0,kk]=[uu,vv]
+            }
         }
     }
 }
@@ -397,4 +436,11 @@ function normalizeAngle(a) {
         a += 360;
     }
     return a;
+}
+
+
+function combineStringsCommutative(str1, str2) {
+    // Ordena as strings alfabeticamente para garantir que a ordem não importe
+    const sorted = [str1, str2].sort();
+    return sorted.join("");
 }

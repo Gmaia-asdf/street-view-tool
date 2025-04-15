@@ -255,10 +255,9 @@ function addpair(load) {
                 if (Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[1].length > 2) {
 
                     Calibration[Object.values(rPanoramas[ntimes])[1]].dist = distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]]);
-
-                    DistE = distC()
-                    label = String(parseFloat(DistE[0]).toFixed(2)) + ' (σ=' + String(parseFloat(DistE[1]).toFixed(2)) + ')';
-
+//                    DistE = distC()
+//                    label = String(parseFloat(DistE[0]).toFixed(2)) + ' (σ=' + String(parseFloat(DistE[1]).toFixed(2)) + ')';
+                    label = String(parseFloat(distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]])).toFixed(2)) + ' (σ=' + String(parseFloat(Calibration[Object.values(rPanoramas[ntimes])[1]].cal[2]).toFixed(2)) + ')';
                 } else {
                     label = distanceGoogle(point1, point2);
                 }
