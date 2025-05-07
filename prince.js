@@ -26,6 +26,11 @@ let loca
 let elevator
 var hc = []
 
+let zoomUpdateTimeout = null;
+
+
+let lastUpdate = 0;
+
 var SVO = new Object;
 
 var astorPlace = {
@@ -35,8 +40,11 @@ var astorPlace = {
 
 async function initMap() {
     // Set up the map
+    const {Map} = await google.maps.importLibrary("maps");
+    const {PlacesService} = await google.maps.importLibrary("places");
+    const {encoding} = await google.maps.importLibrary("geometry");
 
-    rMap = new google.maps.Map(document.getElementById('rMap'),{
+    rMap = new Map(document.getElementById('rMap'),{
         center: astorPlace,
         zoom: 19,
         mapTypeId: "hybrid",
@@ -65,7 +73,7 @@ async function initMap() {
     });
     document.getElementById('rMap').style.width = '50%'
 
-    pMap = new google.maps.Map(document.getElementById('pMap'),{
+    pMap = new Map(document.getElementById('pMap'),{
         center: astorPlace,
         zoom: 19,
         mapTypeId: "hybrid",
@@ -124,7 +132,7 @@ async function initMap() {
         clickToGo: false,
         enableCloseButton: true,
         imageDateControl: false,
-        disableDefaultUI: true,
+        disableKeyboardShortcuts: true,
         zoomControlOptions: false,
         zoomControl: false,
     });
@@ -136,6 +144,8 @@ async function initMap() {
     rPanorama.setVisible(true)
     rPanorama.setVisible(false)
 
+   
+   
     pPanorama = pMap.getStreetView()
     pPanorama.setOptions({
         linksControl: false,
@@ -165,6 +175,8 @@ async function initMap() {
 
     pPanorama.setVisible(true)
     pPanorama.setVisible(false)
+
+   
 
     rMap.addListener('click', function(event) {
         var rPlace = event.latLng;
@@ -225,7 +237,7 @@ async function initMap() {
     };
     var zum1 = 0
 
-    window.addEventListener('keydown', (event) => {
+    window.addEventListener('keydown',{passive: true },  (event) => {
         if ((// Change or remove this condition depending on your requirements.
         event.key === 'ArrowUp' || // Move forward
         event.key === 'ArrowDown' || // Move forward
@@ -322,7 +334,6 @@ function toggleDown() {
         setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
 
-    
 }
 
 function toggleUp() {
@@ -388,7 +399,6 @@ function toggleUp() {
         setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
 
-
 }
 
 function processSVData(data, status) {
@@ -427,6 +437,8 @@ function processSVData(data, status) {
                 lable: indice,
                 opacity: 1
             });
+
+
             pcheckpoint = new google.maps.Marker({
                 position: data.location.latLng,
                 map: pMap,
@@ -435,8 +447,9 @@ function processSVData(data, status) {
                     scale: 5,
                 },
                 lable: indice,
-                opacity: 1
+                opacity: 1,
             });
+
             // setMapOnAll(null, pCheckPoints);
             if (Markers[rPanorama.pano]) {
                 setMapOnAll(null, Markers[rPanorama.pano].Points);
@@ -448,9 +461,11 @@ function processSVData(data, status) {
             Data.push(data)
 
             checkpoint.addListener('click', function() {
+                
+             rPanorama.setVisible(true);
+
                 markerPanoID = data.location.pano;
                 
-                                
                 if (rPanorama.pano != markerPanoID) {
 
                     if (ntimes.length != 0) {
@@ -470,7 +485,7 @@ function processSVData(data, status) {
                         } else {
                             if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
                                 if (Markers[Object.values(rPanoramas[ntimes])[1]].Pairs != undefined) {
-                                    setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                                 //   setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
                                 }
                             }
 
@@ -479,7 +494,7 @@ function processSVData(data, status) {
                             ntimes = data.time.length - 1;
                             if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
                                 if (Markers[Object.values(rPanoramas[ntimes])[1]].Pairs != undefined) {
-                                    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                                //    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
                                 }
                             }
                         }
@@ -490,7 +505,7 @@ function processSVData(data, status) {
                     }
                     if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
                         setMapOnAll(rMap, Markers[rPanorama.pano].Points);
-                        setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
+                      //  setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
                     }
                     document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
 
@@ -530,7 +545,7 @@ function processSVData(data, status) {
                 if (Markers[rPanorama.pano]) {
                     setMapOnAll(null, Markers[rPanorama.pano].Points);
                     // setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                    setMapOnAll(null, Markers[rPanorama.pano].Matches);
+                 //   setMapOnAll(null, Markers[rPanorama.pano].Matches);
                 }
                 if (Markers[pPanorama.pano]) {
                     setMapOnAll(null, Markers[pPanorama.pano].Points);
@@ -538,7 +553,6 @@ function processSVData(data, status) {
                     // setMapOnAll(null, Markers[pPanorama.pano].Matches);
                 }
 
-                            
             });
 
             pcheckpoint.addListener('click', function() {
@@ -566,7 +580,6 @@ function processSVData(data, status) {
                             pPanorama.setPano(Object.values(pPanoramas[pntimes])[0])
                             pPanorama.setVisible(true);
 
-                           
                         }
                     } else {
                         pPanorama.setPano(markerPanoID);
@@ -586,9 +599,8 @@ function processSVData(data, status) {
             CheckPano[data.location.pano] = indice - 1
             pCheckPoints.push(pcheckpoint)
             CheckPoints.push(checkpoint)
-
         }
-    } else {// console.error('Street View data not found for this location.');
+    } else {//console.error('Street View data not found for this location.');
     }
 
 }
@@ -800,7 +812,7 @@ function saveJSON(points) {
 //}
 
 function handleFileSelect(evt) {
-    document.getElementById('files').addEventListener('change', handleFileSelect, false);
+    document.getElementById('files').addEventListener('change',{passive: true }, handleFileSelect, false);
 
     var files = evt.target.files;
     // FileList object

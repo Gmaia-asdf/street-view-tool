@@ -2,8 +2,8 @@ function addpoint(load) {
     var Maps = []
     var Panorama = []
 
-    Map[0] = rMap
-    Map[1] = pMap
+    Maps[0] = rMap
+    Maps[1] = pMap
     Panorama[0] = rPanorama
     Panorama[1] = pPanorama
 
@@ -23,7 +23,6 @@ function addpoint(load) {
         Calibration[Object.values(rPanoramas[ntimes])[1]].Cm[1] = new Array();
         Calibration[Object.values(rPanoramas[ntimes])[1]].Cm[1][0] = new Array();
         psize = 0
-
     }
 
     rphoto = rPanorama.getPhotographerPov()
@@ -43,7 +42,7 @@ function addpoint(load) {
         if (Markers[Panorama[ii].pano]) {} else {
             Markers[Panorama[ii].pano] = ({
                 "Points": [],
-                "Matches": [],
+                // "Matches": [],
                 "Position": [Panorama[ii].getPosition().lat(), Panorama[ii].getPosition().lng()],
                 "Photo": Panorama[ii].getPhotographerPov()
             });
@@ -51,9 +50,9 @@ function addpoint(load) {
 
         if (Markers[Panorama[ii].pano].Points) {
             aux = Markers[Panorama[ii].pano].Points;
-            setMapOnAll(Map[ii], Markers[Panorama[ii].pano].Points);
-            setMapOnAll(null, Markers[Panorama[ii].pano].Pairs);
-            setMapOnAll(null, Markers[Panorama[ii].pano].Matches);
+            setMapOnAll(Maps[ii], Markers[Panorama[ii].pano].Points);
+            // setMapOnAll(null, Markers[Panorama[ii].pano].Pairs);
+            // setMapOnAll(null, Markers[Panorama[ii].pano].Matches);
         } else {
             aux = []
         }
@@ -80,8 +79,8 @@ function addpoint(load) {
 
         var point = new google.maps.Marker({
             position: pos,
-            map: Map[ii],
-            draggable: true,
+            map: Maps[ii],
+            draggable: false,
             label: lab,
             title: tit,
         });
@@ -90,27 +89,36 @@ function addpoint(load) {
 
         Calibration[Object.values(rPanoramas[ntimes])[1]].Cm[ii][parseInt(point.title, 10)] = cartesian(Panorama[ii].location.latLng.lat(), Panorama[ii].location.latLng.lng());
         Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[ii][parseInt(point.title, 10)] = cartesian(point.position.lat(), point.position.lng());
-
         Calibration[Object.values(rPanoramas[ntimes])[1]].Nv[parseInt(point.title, 10)] = [(Nv1[0] + Nv2[0]) / 2, (Nv1[1] + Nv2[1]) / 2];
 
         if (ii == 0) {
             var point1 = point;
             var i1 = ii
-            google.maps.event.addListener(point1, 'drag', function() {
-
+            google.maps.event.addListener(point1, 'dragend', function() {
                 Calibration[Object.values(rPanoramas[ntimes])[1]].Cm[0][parseInt(this.title, 10)] = cartesian(this.map.streetView.position.lat(), this.map.streetView.position.lng())
                 Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[0][parseInt(this.title, 10)] = cartesian(this.position.lat(), point1.position.lng());
                 Calibration[Object.values(rPanoramas[ntimes])[1]].cal = solver(Calibration[Object.values(rPanoramas[ntimes])[1]])
+                this.setDraggable(false);
+            });
 
+            google.maps.event.addListener(point1, 'click', function() {
+                this.setDraggable(true);
             })
+
         } else {
             var point2 = point;
             if (Markers[pPanorama.pano].Points) {
-                google.maps.event.addListener(point2, 'drag', function() {
+                google.maps.event.addListener(point2, 'dragend', function() {
                     Calibration[Object.values(rPanoramas[ntimes])[1]].Cm[1][parseInt(this.title, 10)] = cartesian(this.map.streetView.position.lat(), point2.map.streetView.position.lng());
                     Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[1][parseInt(this.title, 10)] = cartesian(this.position.lat(), point2.position.lng());
                     Calibration[Object.values(rPanoramas[ntimes])[1]].cal = solver(Calibration[Object.values(rPanoramas[ntimes])[1]])
+                    this.setDraggable(false);
                 });
+
+                google.maps.event.addListener(point2, 'click', function() {
+                    this.setDraggable(true);
+                });
+
             }
         }
         Markers[Panorama[ii].pano].Points = aux;
@@ -168,7 +176,7 @@ function addpair(load) {
         var point1 = new google.maps.Marker({
             position: pos1,
             map: rMap,
-            draggable: true,
+            draggable: false,
             label: lab1,
             title: tit1,
         });
@@ -178,7 +186,7 @@ function addpair(load) {
         var point2 = new google.maps.Marker({
             position: pos2,
             map: rMap,
-            draggable: true,
+            draggable: false,
             label: lab2,
             title: tit2,
         });
@@ -216,7 +224,7 @@ function addpair(load) {
             if (Markers[rPanorama.pano]) {
                 setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Points);
                 setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Matches);
+                // setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Matches);
             }
             if (Calibration[Object.values(rPanoramas[ntimes])[1]]) {
                 rphoto = rPanorama.getPhotographerPov()
@@ -237,8 +245,17 @@ function addpair(load) {
             point1.rPh = rPanorama.getPhotographerPov()
 
             point2.setLabel(label);
+            this.setDraggable(false)
 
             // rulerpoly.setPath([point1.getPosition(), point2.getPosition()]);
+        });
+
+        google.maps.event.addListener(point1, 'click', function() {
+            this.setDraggable(true);
+        })
+
+        google.maps.event.addListener(point1, 'dragend', function() {
+            this.setDraggable(false)
         });
 
         google.maps.event.addListener(point2, 'drag', function() {
@@ -246,7 +263,7 @@ function addpair(load) {
             if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
                 setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Points);
                 setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Matches);
+                // setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Matches);
             }
             if (Calibration[Object.values(rPanoramas[ntimes])[1]]) {
                 rphoto = rPanorama.getPhotographerPov()
@@ -255,8 +272,8 @@ function addpair(load) {
                 if (Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[1].length > 2) {
 
                     Calibration[Object.values(rPanoramas[ntimes])[1]].dist = distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]]);
-//                    DistE = distC()
-//                    label = String(parseFloat(DistE[0]).toFixed(2)) + ' (σ=' + String(parseFloat(DistE[1]).toFixed(2)) + ')';
+                    // DistE = distC()
+                    // label = String(parseFloat(DistE[0]).toFixed(2)) + ' (σ=' + String(parseFloat(DistE[1]).toFixed(2)) + ')';
                     label = String(parseFloat(distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]])).toFixed(2)) + ' (σ=' + String(parseFloat(Calibration[Object.values(rPanoramas[ntimes])[1]].cal[2]).toFixed(2)) + ')';
                 } else {
                     label = distanceGoogle(point1, point2);
@@ -270,7 +287,15 @@ function addpair(load) {
 
             point2.setLabel(label);
             point2.Pos = [point2.position.lat(), point2.position.lng()]
+            this.setDraggable(false)
+        });
 
+        google.maps.event.addListener(point2, 'click', function() {
+            this.setDraggable(true);
+        })
+
+        google.maps.event.addListener(point2, 'dragend', function() {
+            this.setDraggable(false)
         });
 
         aux.push(point1)
@@ -278,117 +303,4 @@ function addpair(load) {
 
         Markers[Object.values(rPanoramas[ntimes])[1]].Pairs = aux;
     }
-}
-
-function addmatch(load) {
-    Panorama[0] = rPanorama
-    Panorama[1] = pPanorama
-
-    if (rPanorama.visible == false) {
-        rPanorama.setVisible(true)
-        document.getElementsByName('Date')[0].value = rPanoramas[ntimes].hf
-    }
-
-    if (Markers[rPanorama.pano]) {} else {
-        Markers[rPanorama.pano] = ({
-            "Points": [],
-            "Matches:": [],
-            "Position": [rPanorama.getPosition().lat(), rPanorama.getPosition().lng()],
-            "Photo": rPanorama.getPhotographerPov()
-        });
-    }
-
-    if (Markers[rPanorama.pano].Matches) {
-        aux = Markers[rPanorama.pano].Matches;
-        setMapOnAll(null, Markers[rPanorama.pano].Points);
-        setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-        setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
-    } else {
-        aux = []
-    }
-    var hd = rPanorama.pov.heading;
-    var zm = Math.tan(45 / Math.pow(2, rPanorama.getZoom()) * Math.PI / 180);
-    if (load.position !== undefined) {
-        var pos = {
-            lat: load.position[0],
-            lng: load.position[1]
-        }
-        var lab = "C" + load.index;
-        var tit = load.index
-    } else {
-        var pos = {
-            lat: rPanorama.location.latLng.lat() + 2 * Math.cos(Math.PI * hd / 180) / (60 * 1852) / zm,
-            lng: rPanorama.location.latLng.lng() + 2 * Math.cos(Math.PI * hd / 180) / (60 * 1852) / zm
-        }
-        var lab = "C" + String(aux.length);
-        var tit = String(aux.length)
-    }
-    var point = new google.maps.Marker({
-        position: {
-            lat: rPanorama.location.latLng.lat() + 2 * Math.cos(Math.PI * hd / 180) / (60 * 1852) / zm,
-            lng: rPanorama.location.latLng.lng() + 2 * Math.cos(Math.PI * hd / 180) / (60 * 1852) / zm
-        },
-        map: rMap,
-        draggable: true,
-        label: lab,
-        title: tit,
-    });
-
-    aux.push(point)
-    google.maps.event.addListener(point, 'click', function() {
-        point.setTitle(String((parseInt(point.title, 10) + 1)));
-        point.setLabel("C" + String((parseInt(point.title, 10))));
-    });
-
-    google.maps.event.addListener(point, 'dblclick', function() {
-        var input = document.getElementById('input-match');
-        point.setLabel("C" + input.value);
-        point.setTitle(input.value);
-    });
-
-    google.maps.event.addListener(point, 'drag', function() {
-        setMapOnAll(null, Markers[rPanorama.pano].Points);
-        setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-        setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
-    });
-    Markers[rPanorama.pano].Matches = aux;
-
-    rPanorama.addListener('zoom_changed', function() {
-        ajd = rPanorama.getPov();
-        State[0].heading = ajd.heading
-        State[0].pitch = ajd.pitch
-        State[0].zoom = ajd.zoom
-        State[0].fov = (180 / Math.pow(2, State[0].zoom));
-        State[0].pano = rPanorama.pano;
-        zumn1 = Math.round(2 * State[0].zoom)
-        if (zum1 != zumn1 && State[0].pano) {
-            zum1 = zumn1;
-            State[0].position = [rPanorama.location.latLng.lat(), rPanorama.location.latLng.lng()];
-            loadPanoUrl()
-        }
-
-    });
-
-    State[1] = {
-        heading: 0
-    };
-
-    var zum2 = 0
-    pPanorama.addListener('zoom_changed', function() {
-        ajd = this.getPov();
-        State[1].heading = ajd.heading
-        State[1].pitch = ajd.pitch
-        State[1].zoom = ajd.zoom
-        State[1].fov = (180 / Math.pow(2, State[1].zoom));
-        State[1].pano = this.pano;
-
-        zumn2 = Math.round(2 * State[1].zoom)
-        if (zum2 != zumn2 && State[1].pano) {
-            zum2 = zumn2;
-            State[1].position = [this.location.latLng.lat(), this.location.latLng.lng()];
-
-            loadPanoUrl()
-        }
-    });
-
 }
