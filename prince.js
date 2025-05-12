@@ -28,7 +28,6 @@ var hc = []
 
 let zoomUpdateTimeout = null;
 
-
 let lastUpdate = 0;
 
 var SVO = new Object;
@@ -144,8 +143,6 @@ async function initMap() {
     rPanorama.setVisible(true)
     rPanorama.setVisible(false)
 
-   
-   
     pPanorama = pMap.getStreetView()
     pPanorama.setOptions({
         linksControl: false,
@@ -175,8 +172,6 @@ async function initMap() {
 
     pPanorama.setVisible(true)
     pPanorama.setVisible(false)
-
-   
 
     rMap.addListener('click', function(event) {
         var rPlace = event.latLng;
@@ -237,7 +232,9 @@ async function initMap() {
     };
     var zum1 = 0
 
-    window.addEventListener('keydown',{passive: true },  (event) => {
+    window.addEventListener('keydown', {
+        passive: true
+    }, (event) => {
         if ((// Change or remove this condition depending on your requirements.
         event.key === 'ArrowUp' || // Move forward
         event.key === 'ArrowDown' || // Move forward
@@ -320,17 +317,15 @@ function toggleDown() {
             }
         }
     }
-    if (Markers[rPanorama.pano]) {
+    if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
         setMapOnAll(rMap, Markers[rPanorama.pano].Points);
-        setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
     }
 
-    if (Markers[pPanorama.pano]) {
+    if (Markers[pPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
         setMapOnAll(pMap, Markers[pPanorama.pano].Points);
-        setMapOnAll(pMap, Markers[pPanorama.pano].Matches);
     }
 
-    if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+    if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
         setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
 
@@ -340,12 +335,10 @@ function toggleUp() {
 
     if (Markers[rPanorama.pano]) {
         setMapOnAll(null, Markers[rPanorama.pano].Points);
-        setMapOnAll(null, Markers[rPanorama.pano].Matches);
     }
 
     if (Markers[pPanorama.pano]) {
         setMapOnAll(null, Markers[pPanorama.pano].Points);
-        setMapOnAll(null, Markers[pPanorama.pano].Matches);
     }
 
     if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
@@ -385,18 +378,18 @@ function toggleUp() {
             }
         }
     }
-    if (Markers[rPanorama.pano]) {
+
+
+    if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%' ) {
         setMapOnAll(rMap, Markers[rPanorama.pano].Points);
-        setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
     }
 
-    if (Markers[pPanorama.pano]) {
+    if (Markers[pPanorama.pano]&& document.getElementById('rMap').style.width == '50%') {
         setMapOnAll(pMap, Markers[pPanorama.pano].Points);
-        setMapOnAll(pMap, Markers[pPanorama.pano].Matches);
     }
 
-    if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
-        setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+    if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
 
 }
@@ -438,7 +431,6 @@ function processSVData(data, status) {
                 opacity: 1
             });
 
-
             pcheckpoint = new google.maps.Marker({
                 position: data.location.latLng,
                 map: pMap,
@@ -453,7 +445,6 @@ function processSVData(data, status) {
             // setMapOnAll(null, pCheckPoints);
             if (Markers[rPanorama.pano]) {
                 setMapOnAll(null, Markers[rPanorama.pano].Points);
-                setMapOnAll(null, Markers[rPanorama.pano].Matches);
             }
             // rPanorama.setPano(data.location.pano)
             // rPanoramas = data.time;
@@ -461,11 +452,15 @@ function processSVData(data, status) {
             Data.push(data)
 
             checkpoint.addListener('click', function() {
-                
-             rPanorama.setVisible(true);
+
+                if (Markers[rPanorama.pano]) {
+                    setMapOnAll(null, Markers[rPanorama.pano].Points);
+                }
+
+                rPanorama.setVisible(true);
 
                 markerPanoID = data.location.pano;
-                
+
                 if (rPanorama.pano != markerPanoID) {
 
                     if (ntimes.length != 0) {
@@ -483,18 +478,18 @@ function processSVData(data, status) {
                             rPanoramas = data.time
                             rPanorama.setPano(Object.values(rPanoramas[ntimes])[0])
                         } else {
-                            if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
-                                if (Markers[Object.values(rPanoramas[ntimes])[1]].Pairs != undefined) {
-                                 //   setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                            if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+                                if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+                                    setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
                                 }
                             }
 
                             rPanorama.setPano(markerPanoID);
                             rPanoramas = data.time;
                             ntimes = data.time.length - 1;
-                            if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
-                                if (Markers[Object.values(rPanoramas[ntimes])[1]].Pairs != undefined) {
-                                //    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                            if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+                                if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+                                    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
                                 }
                             }
                         }
@@ -503,9 +498,9 @@ function processSVData(data, status) {
                         rPanoramas = data.time;
                         ntimes = data.time.length - 1;
                     }
+
                     if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
                         setMapOnAll(rMap, Markers[rPanorama.pano].Points);
-                      //  setMapOnAll(rMap, Markers[rPanorama.pano].Matches);
                     }
                     document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
 
@@ -523,7 +518,10 @@ function processSVData(data, status) {
                                     pTime = Object.values(tdata.time[jj])[0];
                                     pntimes = jj;
                                     pPanoramas = tdata.time
+
+                                    if (document.getElementById('rMap').style.width == '50%') {
                                     setMapOnAll(pMap, pCheckPoints[CheckPano[pPano]])
+                                    }
                                     pPanorama.setPano(pTime);
                                 }
                             }
@@ -536,21 +534,10 @@ function processSVData(data, status) {
 
                     rPanorama.setVisible(true);
 
-                    if (Markers[pTime]) {
+                    if (Markers[pTime] && document.getElementById('rMap').style.width == '50%') {
                         setMapOnAll(pMap, Markers[pTime].Points);
                         //setMapOnAll(pMap, Markers[pPanorama.pano].Pairs);
-                        //setMapOnAll(pMap, Markers[pPanorama.pano].Matches);
                     }
-                }
-                if (Markers[rPanorama.pano]) {
-                    setMapOnAll(null, Markers[rPanorama.pano].Points);
-                    // setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                 //   setMapOnAll(null, Markers[rPanorama.pano].Matches);
-                }
-                if (Markers[pPanorama.pano]) {
-                    setMapOnAll(null, Markers[pPanorama.pano].Points);
-                    //setMapOnAll(null, Markers[pPanorama.pano].Pairs);
-                    // setMapOnAll(null, Markers[pPanorama.pano].Matches);
                 }
 
             });
@@ -621,16 +608,16 @@ function duplicate(s) {
 
             if (Markers[rPanorama.pano]) {
                 setMapOnAll(null, Markers[rPanorama.pano].Points);
+                setMapOnAll(null, Markers[pPanorama.pano].Points);
+                if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+                    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                }
+
             }
 
             if (Markers[pPanorama.pano]) {
                 setMapOnAll(null, Markers[pPanorama.pano].Points);
-
-            }
-
-            if (Markers.length > 0) {
-                setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-            }
+                }
 
             rPanorama.setVisible(false)
             rPanorama.setVisible(true)
@@ -646,14 +633,14 @@ function duplicate(s) {
             pPanorama.setVisible(false)
 
             if (Markers[rPanorama.pano]) {
-                setMapOnAll(null, Markers[rPanorama.pano].Points);
+                setMapOnAll(rMap, Markers[rPanorama.pano].Points);
             }
 
             if (Markers[pPanorama.pano]) {
-                setMapOnAll(null, Markers[pPanorama.pano].Points);
+                setMapOnAll(pMap, Markers[pPanorama.pano].Points);
             }
 
-            if (Markers.length > 0) {
+            if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
                 setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
             }
 
@@ -812,7 +799,9 @@ function saveJSON(points) {
 //}
 
 function handleFileSelect(evt) {
-    document.getElementById('files').addEventListener('change',{passive: true }, handleFileSelect, false);
+    document.getElementById('files').addEventListener('change', {
+        passive: true
+    }, handleFileSelect, false);
 
     var files = evt.target.files;
     // FileList object
@@ -942,7 +931,6 @@ function distanceC(point1, point2, Cal) {
 }
 
 function distC() {
-
     var den = 0;
     var num = 0;
 

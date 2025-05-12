@@ -122,10 +122,8 @@ function addpoint(load) {
             }
         }
         Markers[Panorama[ii].pano].Points = aux;
-
     }
     psize = Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[0].length
-
 }
 
 function addpair(load) {
@@ -134,6 +132,9 @@ function addpair(load) {
         document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
     }
 
+    if (document.getElementById('rMap').style.width == '50%') {
+    duplicate(1)
+    }
     if (Markers[Object.values(rPanoramas[ntimes])[1]]) {} else {
         Markers[Object.values(rPanoramas[ntimes])[1]] = ({
             "Pairs": []
@@ -272,9 +273,9 @@ function addpair(load) {
                 if (Calibration[Object.values(rPanoramas[ntimes])[1]].Pt[1].length > 2) {
 
                     Calibration[Object.values(rPanoramas[ntimes])[1]].dist = distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]]);
-                    // DistE = distC()
-                    // label = String(parseFloat(DistE[0]).toFixed(2)) + ' (σ=' + String(parseFloat(DistE[1]).toFixed(2)) + ')';
-                    label = String(parseFloat(distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]])).toFixed(2)) + ' (σ=' + String(parseFloat(Calibration[Object.values(rPanoramas[ntimes])[1]].cal[2]).toFixed(2)) + ')';
+                     DistE = distC()
+                     label = String(parseFloat(DistE[0]).toFixed(2)) + ' (σ=' + String(parseFloat(DistE[1]).toFixed(2)) + ')';
+                  //  label = String(parseFloat(distanceC(point1, point2, Calibration[Object.values(rPanoramas[ntimes])[1]])).toFixed(2)) + ' (σ=' + String(parseFloat(Calibration[Object.values(rPanoramas[ntimes])[1]].cal[2]).toFixed(2)) + ')';
                 } else {
                     label = distanceGoogle(point1, point2);
                 }
