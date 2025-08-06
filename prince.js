@@ -1,4 +1,5 @@
 var rPanorama;
+var pPanorama;
 var meusPontos;
 var indice;
 var dados = [];
@@ -17,14 +18,20 @@ var json = [];
 var sv;
 var pntimes = [];
 var markerPanoID = [];
+const Dates = new Set()
 var psize = 0;
 var State = new Array(2);
 var Calibration = new Array();
 let popupOriginal
 let popupDoc
 let loca
-let elevator
-var hc = []
+
+// Variáveis globais para seleção e linha dos marcadores P
+window._marcadoresPSelecionados = [];
+window._marcadoresPContagem = {};
+window._marcadoresPLinha = null;
+window._marcadoresPLinhasCount = 0; // Inicialize a variável global no início do seu script
+//let elevator
 
 let zoomUpdateTimeout = null;
 
@@ -35,6 +42,12 @@ var SVO = new Object;
 var astorPlace = {
     lat: -22.90799,
     lng: -43.182550
+};
+
+// rua
+astorPlace = {
+    lat: -22.447031,
+    lng: -43.171537
 };
 
 async function initMap() {
@@ -116,7 +129,7 @@ async function initMap() {
     rMap.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(document.getElementById('files'));
     rMap.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(document.getElementById('floating-Load'));
     rMap.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(document.getElementById('floating-download'));
-    // rMap.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('floating-twoScreens'));
+    //pMap.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('file_input'));
 
     meusPontos = [];
     indice = 0;
@@ -138,7 +151,8 @@ async function initMap() {
     rPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-Down'))
     rPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-Up'))
     rPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-Date'))
-    // rPanorama.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('input-point'));
+    rPanorama.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(document.getElementById('file_txt'));
+    //rPanorama.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(document.getElementById('file-point'));
 
     rPanorama.setVisible(true)
     rPanorama.setVisible(false)
@@ -157,8 +171,11 @@ async function initMap() {
     });
     pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-point'));
 
-    pPanorama.controls[google.maps.ControlPosition.TOP_RIGHT].push(document.getElementById('floating-point2'));
-    pPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('file_input'));
+    pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-point2'));
+    pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('input-points'));
+    pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('download-btn'));
+
+    pPanorama.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(document.getElementById('file_input'));
 
     // pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('input-match'));
     rPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('floating-ruler2'));
@@ -175,8 +192,8 @@ async function initMap() {
 
     rMap.addListener('click', function(event) {
         var rPlace = event.latLng;
-        for (i = -5; i < 5; i++) {
-            for (j = -5; j < 5; j++) {
+        for (i = -3; i < 3; i++) {
+            for (j = -3; j < 3; j++) {
                 sv.getPanorama({
                     location: {
                         lat: rPlace.lat() + 2 * (i) / (60 * 1852),
@@ -185,6 +202,12 @@ async function initMap() {
                     radius: 2,
                 }, processSVData);
             }
+        }
+        if (CheckPoints[0]) {
+            astorPlace = {
+                lat: CheckPoints[0].position.lat(),
+                lng: CheckPoints[0].position.lng(),
+            };
         }
     });
 
@@ -250,7 +273,7 @@ async function initMap() {
     }, );
 
     // Cria a instância da ElevationService
-    elevator = new google.maps.ElevationService();
+    // elevator = new google.maps.ElevationService();
 
     // Chama a função para obter a elevação
 
@@ -379,17 +402,16 @@ function toggleUp() {
         }
     }
 
-
-    if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%' ) {
+    if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
         setMapOnAll(rMap, Markers[rPanorama.pano].Points);
     }
 
-    if (Markers[pPanorama.pano]&& document.getElementById('rMap').style.width == '50%') {
+    if (Markers[pPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
         setMapOnAll(pMap, Markers[pPanorama.pano].Points);
     }
 
     if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
-    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+        setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
     }
 
 }
@@ -415,11 +437,13 @@ function processSVData(data, status) {
             meusPontos[indice] = {
                 lng: data.location.latLng.lng(),
                 lat: data.location.latLng.lat()
+
             };
+
             indice = 1;
         }
         if (cont == 1) {
-            dados = dados + data.location.pano + " " + data.location.latLng.lat() + " " + data.location.latLng.lng() + " " + data.tiles.originHeading + " " + data.tiles.originPitch + "\r\n";
+            //  dados = dados + data.location.pano + " " + data.location.latLng.lat() + " " + data.location.latLng.lng() + " " + data.tiles.originHeading + " " + data.tiles.originPitch + "\r\n";
             checkpoint = new google.maps.Marker({
                 position: data.location.latLng,
                 map: rMap,
@@ -520,7 +544,7 @@ function processSVData(data, status) {
                                     pPanoramas = tdata.time
 
                                     if (document.getElementById('rMap').style.width == '50%') {
-                                    setMapOnAll(pMap, pCheckPoints[CheckPano[pPano]])
+                                        setMapOnAll(pMap, pCheckPoints[CheckPano[pPano]])
                                     }
                                     pPanorama.setPano(pTime);
                                 }
@@ -617,7 +641,7 @@ function duplicate(s) {
 
             if (Markers[pPanorama.pano]) {
                 setMapOnAll(null, Markers[pPanorama.pano].Points);
-                }
+            }
 
             rPanorama.setVisible(false)
             rPanorama.setVisible(true)
@@ -760,11 +784,11 @@ function toggledownload() {
 
     // console.save(Posicao,'dados.json')
     //saveJSON(JSON.stringify(Posicao));
-    //localStorage.setItem('C:/Users/Gustavo%20Maia/OneDrive/Projetos/Speed%20King/API%20Google/jason.json', JSON.stringify(Posicao)) 
 
 }
 
 function download(filename, text) {
+    solverP()
     var element = document.createElement('a');
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
     element.setAttribute('download', filename);
@@ -799,83 +823,52 @@ function saveJSON(points) {
 //}
 
 function handleFileSelect(evt) {
-    document.getElementById('files').addEventListener('change', {
-        passive: true
-    }, handleFileSelect, false);
-
     var files = evt.target.files;
-    // FileList object
-    // files is a FileList of File objects. List some properties.
-    var output = [];
-    f = files[0]
+    if (!files || files.length === 0)
+        return;
+    var f = files[0];
     var reader = new FileReader();
 
-    // Closure to capture the file information.
-    reader.onload = (function(theFile) {
-        return function(e) {
-            //console.log('e readAsText = ', e);
-            //console.log('e readAsText target = ', e.target.result);
-            try {
-                json = JSON.parse(e.target.result);
-                console.log(json)
-                //alert('json global var has been set to parsed json of this file here it is unevaled = \n' + JSON.stringify(json));
-            } catch (e) {//alert('ex when trying to parse json = ' + ex);
-            }
-        }
-    }
-    )(f);
+    reader.onload = function(e) {
+        // Aqui você recebe o conteúdo do TXT como string:
+        var conteudo = e.target.result;
+        LoadFile(txtParaObjeto(conteudo))
+    };
     reader.readAsText(f);
+    
 }
 
-function LoadFile(evt) {
-    Markers = [];
-    for (q = 0; q < json.length; q++) {
-
-        astorPlace.lat = json[q].position[0];
-        astorPlace.lng = json[q].position[1];
-        if (q == 0) {
-            initMap()
-        }
-
-        for (i = -2; i < 2; i++) {
-            for (j = -2; j < 2; j++) {
-                sv.getPanorama({
-                    location: {
-                        lat: astorPlace.lat + 2 * (i) / (60 * 1852),
-                        lng: astorPlace.lng + 2 * (j) / (60 * 1852)
-                    },
-                    radius: 2.5,
-                    preference: google.maps.StreetViewPreference.BEST
-                }, processSVData);
-            }
-        }
-
-        Markers[json[q].rPanorama] = ({
-            "Points": [],
-            "Pairs": [],
-            "Matches": [],
-            "Position": json[q].position,
-            "Photo": json[q].photo
-        });
-
-        rPanorama.setPano(json[q].rPanorama)
-
-        for (k = 0; k < json[q].points.length; k++) {
-
-            if (json[q].points[k]) {
-                addpoint(json[q].points[k])
-                console.log(Markers)
-            }
-            if (json[q].pairs[k]) {
-                addpair(json[q].pairs[k])
-            }
-            if (json[q].matches[k]) {
-                addmatch(json[q].matches[k])
-            }
-        }
-        setMapOnAll(null, Markers[json[q].rPanorama].Points);
-
+function txtParaObjeto(conteudo) {
+    const linhas = conteudo.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // Usa & ou : como separador
+    const objeto = linhas.map(linha => {
+        return linha.split(/[&;]/).map(e => e.trim());
     }
+    );
+    return objeto;
+    
+}
+
+function LoadFile(pontos) {  
+    for (q = 0; q < pontos.length; q++) {
+        sv.getPanoramaById({ pano: pontos[q][0]},processSVData);
+        sv.getPanoramaById({ pano: pontos[q][1]},processSVData);
+        rPanorama.setPano(pontos[q][0])
+        rPanorama.setPov({
+          heading: parseFloat(pontos[q][8]),
+          pitch: parseFloat(pontos[q][10])
+        });
+        pPanorama.setPano(pontos[q][1])
+        pPanorama.setPov({
+          heading: parseFloat(pontos[q][9]),
+          pitch: parseFloat(pontos[q][11])
+        });
+        adcElementoC()
+        popupOriginal.document.getElementById("image-original").children[q+1].style.left= pontos[q][5] - SVO.markerWidth/4+1 + "px"
+        popupOriginal.document.getElementById("image-original").children[q+1].style.top= pontos[q][6] - SVO.markerWidth/4+1 + "px"
+        
+    }
+    
 }
 
 function cartesian(lat2, lon2) {
@@ -936,8 +929,8 @@ function distC() {
 
     for (k = 0; k < rPanoramas.length; k++) {
 
-        if (Calibration[Object.values(rPanoramas[k])[1]] != undefined) {
-            if (Calibration[Object.values(rPanoramas[k])[1]].cal[2] != undefined) {
+        if (Calibration[Object.values(rPanoramas[k])[1]]) {
+            if (Calibration[Object.values(rPanoramas[k])[1]].cal[2]) {
 
                 den = den + Calibration[Object.values(rPanoramas[k])[1]].dist / Math.pow(Calibration[Object.values(rPanoramas[k])[1]].cal[2], 2);
 
@@ -946,8 +939,9 @@ function distC() {
         }
     }
     var dist = [];
-    dist[0] = den / num;
+
     dist[1] = Math.sqrt(1 / num);
+    dist[0] = den / num;
     return dist
 }
 
@@ -994,4 +988,7 @@ function LocationElevation(location, elevator) {
         return null;
     }
     );
+    //uso
+    //LocationElevation(pPanorama.location.latLng, elevator).then( (result) => {
+    // hc=result;  
 }

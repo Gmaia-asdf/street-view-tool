@@ -19,6 +19,7 @@
         <script type="text/javascript" src="solver.js"></script>
         <script type="text/javascript" src="markers.js"></script>
         <script type="text/javascript" src="markerz.js"></script>
+        
     </head>
     <body onload="initMap();">
         <input id="pac-input" class="controls" type="text" placeholder="SearchBox">
@@ -42,13 +43,24 @@
             <input type="button" value="Trena 2" onclick="adcElemento();">
         </div>
         <div id="floating-point2">
-            <input type="button" value="Calibrar imagem" onclick="adcElementoC();">
+            <input type="button" value="Calibrar QUESTIONADO" onclick="adcElementoC();">
+        </div>
+
+        <button id="download-btn" onclick="solverP(),download('dados.txt',dados)">Download</button>
+
+        <div id="input-points">
+        <input type="number" value="0" style="width: 30px; background: #fff;">
         </div>
        
         <div id="rMap"></div>
         <div id="pMap"></div>
         <img id="input_image" style="display: none;">
         <input type="file" id="file_input">
+        <input type="file" id="file_txt">
+        <script>
+        document.getElementById('file_txt').addEventListener('change', handleFileSelect, false);
+        </script>
+
         <script>
 
             let img_input = document.getElementById('input_image');

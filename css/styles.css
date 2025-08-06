@@ -118,7 +118,7 @@ html, body {
 
 #floating-point2 {
     position: absolute;
-    z-index: 5;
+    z-index: 0;
     background-color: #fff;
     padding: 5px;
     border: 1px solid #999;
@@ -129,18 +129,6 @@ html, body {
     padding-right: 5px;
 }
 
-#input-point {
-    position: absolute;
-    width: 50px;
-    z-index: 5;
-    background-color: #fff;
-    padding: 8px;
-    border: 1px solid #999;
-    text-align: center;
-    font-family: 'Roboto', 'sans-serif';
-    line-height: 1%;
-    padding-left: 0px;
-}
 
 #floating-pair {
     position: absolute;
@@ -335,4 +323,12 @@ html, body {
     line-height: 1%;
     padding-left: -100px;
     padding-right: 5px;
+}
+
+#marker {
+  display: flex;
+  height: 50px;
+  width: 50px;
+  background: white;
+  border: 3px solid black;
 }

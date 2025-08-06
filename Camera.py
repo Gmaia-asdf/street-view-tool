@@ -1,163 +1,710 @@
 import numpy as np
 import cv2
+from collections import defaultdict
+from scipy.stats import t, norm
+from scipy.optimize import root_scalar
+from scipy.optimize import minimize
+import os
 
-# Carregar a imagem
-image = cv2.imread('C:/20250128_110731.jpg')
+caso=45031
+
+# Defina o número de pontos iniciais que serão excluídos para a calibração
+n_heights = 6   
+
+
+# Defina o valor do padding desejado
+padding_x = 200
+padding_y = 200
+
+def pad_image(img, pad_x, pad_y):
+    return cv2.copyMakeBorder(img, pad_y, pad_y, pad_x, pad_x, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+
+# Variáveis globais para marcação e zoom/pan
+drag_start = None
+dragging = False
+zoom = 0.1
+zoom_step = 0.1   
+min_zoom = 0.1    # Agora é possível diminuir o zoom
+max_zoom = 5.0
+offset = np.array([0, 0], dtype=np.int32)
+pontos_clicados = []  # Armazena os cliques para BASE e TOPO
+  
+# Variáveis globais para as dimensões atuais da imagem e da janela
+current_img_w = 0  
+current_img_h = 0
+current_win_width = 0
+current_win_height = 0
+
+# Input: valor desejado da PDF da t-Student
+y_target = 1e-4  # Exemplo: defina o valor que desejar
+
+n_values = np.arange(4, 50)  # n de 2 a 31
+k_values = []
+
+for n in n_values:
+    nu = n - 1  # graus de liberdade
+    
+    # Passo 1: Encontrar x onde PDF_t(x, nu) = y_target
+    def equation_t(x):
+        return t.pdf(x, df=nu) - y_target
+    
+    try:
+        # Encontre x > 0 onde a PDF_t atinge y_target
+        sol_x = root_scalar(equation_t, bracket=[0, 200], method='brentq')
+        x_crit = sol_x.root
+    except ValueError:
+        # Se não houver solução (y_target maior que o pico da PDF) 
+        k_values.append(np.nan)
+        continue
+    
+    # Passo 2: Encontrar k tal que PDF_normal(x_crit, k) = y_target
+    def equation_k(k):
+        return norm.pdf(x_crit, scale=k) - y_target
+    
+    try:
+        sol_k = root_scalar(equation_k, bracket=[0.1, 10], method='brentq')
+        k_values.append(sol_k.root)
+    except ValueError:
+        k_values.append(np.nan)
+
+ 
+# Função para ler o arquivo e agrupar os pontos pela id (primeira coluna)
+def ler_dados_txt_multi(filepath):
+    object_points_dict = defaultdict(list)
+    image_points_dict = defaultdict(list)
+    extra_data_dict = defaultdict(list)  # Para as duas colunas extras
+    with open(filepath, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            partes = line.replace(",", ".").split(";")
+            if len(partes) < 8:
+                print("Linha ignorada (formato inesperado):", line)
+                continue
+            id_val = partes[0].strip()
+            world = [float(partes[1]), float(partes[2]), float(partes[3])]
+            image = [float(partes[4]), float(partes[5])]
+            extra = [float(partes[6])]
+            object_points_dict[id_val].append(world)
+            image_points_dict[id_val].append(image) 
+            extra_data_dict[id_val].append(extra)
+    print("IDs encontrados:", list(object_points_dict.keys()))
+    return object_points_dict, image_points_dict, extra_data_dict
+
+# Função auxiliar: clamp
+def clamp(val, minval, maxval):
+    return max(minval, min(val, maxval))
+
+def mouse_zoom_pan(event, x, y, flags, param):
+    global zoom, offset, drag_start, dragging, current_win_width, current_win_height, current_img_w, current_img_h, pontos_clicados
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drag_start = (x, y)
+        dragging = False
+    elif event == cv2.EVENT_MOUSEMOVE and drag_start is not None:
+        dx = x - drag_start[0]
+        dy = y - drag_start[1]
+        if abs(dx) >= 2 or abs(dy) >= 2:
+            dragging = True
+            offset[0] -= dx
+            offset[1] -= dy
+            drag_start = (x, y)
+    elif event == cv2.EVENT_LBUTTONUP:
+        if not dragging and len(pontos_clicados) < 2*(n_heights+1):
+            # de forma global, registramos as coordenadas relativas:
+            pt_x = int((x + offset[0]) / zoom)
+            pt_y = int((y + offset[1]) / zoom)
+            pontos_clicados.append((pt_x, pt_y))
+        drag_start = None
+        dragging = False
+    elif event == cv2.EVENT_MOUSEWHEEL:
+        # Atualiza o zoom mantendo a posição relativa do ponteiro
+        if flags > 0:
+            zoom_new = clamp(zoom + zoom_step, min_zoom, max_zoom)
+        else:
+            zoom_new = clamp(zoom - zoom_step, min_zoom, max_zoom)
+        mx, my = x, y
+        ox, oy = offset[0], offset[1]
+        # Ajusta o offset para que o ponto sob o ponteiro permaneça fixo
+        new_offset_x = int((ox + mx) * zoom_new / zoom - mx)
+        new_offset_y = int((oy + my) * zoom_new / zoom - my)
+        max_offset_x = max(0, int(current_img_w * zoom_new) - current_win_width)
+        max_offset_y = max(0, int(current_img_h * zoom_new) - current_win_height)
+        offset[0] = clamp(new_offset_x, 0, max_offset_x)
+        offset[1] = clamp(new_offset_y, 0, max_offset_y)
+        zoom = zoom_new
+
+def mostrar_zoom_pan_marking():
+    global zoom, offset, current_win_width, current_win_height, current_img_w, current_img_h, pontos_clicados
+    window_name = "Zoom/Pan - Marque o topo"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.setMouseCallback(window_name, mouse_zoom_pan)
+    cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    
+    # Use uma cópia da imagem para marcação
+
+    base_img = image.copy()
+    current_img_h, current_img_w = base_img.shape[:2]
+    
+    # Configurar zoom inicial baseado na janela atual
+    rect = cv2.getWindowImageRect(window_name)
+    if rect is not None:
+        _, _, win_width, win_height = rect
+        current_win_width, current_win_height = win_width, win_height
+        zoom = min(win_width / float(current_img_w), win_height / float(current_img_h))
+        if zoom < min_zoom:
+            zoom = min_zoom
+    else:
+        current_win_width, current_win_height = 800, 600
+        
+    offset = np.array([0, 0], dtype=np.int32)
+    
+    while len(pontos_clicados) < 2*(n_heights+1):
+        rect = cv2.getWindowImageRect(window_name)
+        if rect is None:
+            break
+        _, _, win_width, win_height = rect
+        current_win_width, current_win_height = win_width, win_height
+
+        # Redimensiona a imagem de marcação de acordo com o zoom
+        zoomed_w = int(current_img_w * zoom)
+        zoomed_h = int(current_img_h * zoom)
+        zoomed = cv2.resize(base_img, (zoomed_w, zoomed_h), interpolation=cv2.INTER_LINEAR)
+        
+        # Calcula a região visível com base no offset
+        x0 = clamp(offset[0], 0, max(0, zoomed_w - current_win_width))
+        y0 = clamp(offset[1], 0, max(0, zoomed_h - current_win_height))
+        view = zoomed[y0:y0+current_win_height, x0:x0+current_win_width].copy()
+        #cv2.imshow(window_name, view)
+        #if cv2.waitKey(10) != -1:
+           #     break
+        
+        
+        # Desenhar os pontos já marcados na view (convertendo as coordenadas)
+        for i, p in enumerate(pontos_clicados):
+            x_draw = int(p[0] * zoom) - x0
+            y_draw = int(p[1] * zoom) - y0
+            if i % 2 == 0:
+                # Desenha uma cruz verde para o primeiro ponto
+                cor = (0, 255, 0)
+                tamanho = 12
+                espessura = 3 
+                cv2.line(view, (x_draw - tamanho, y_draw - tamanho), (x_draw + tamanho, y_draw + tamanho), cor, espessura)
+                cv2.line(view, (x_draw - tamanho, y_draw + tamanho), (x_draw + tamanho, y_draw - tamanho), cor, espessura)
+            else:
+                # Amarelo para o segundo ponto (círculo)
+                cv2.circle(view, (x_draw, y_draw), 12, (0, 255, 255), 3)
+        cv2.imshow(window_name, view)
+                
+        if cv2.waitKey(10) != -1:
+                break
+    cv2.destroyWindow(window_name)
+
+# Função iterativa para estimar a altura
+def calcular_altura_iterativa(camera_matrix, dist_coeffs, rvec, tvec, base_mundo, base_imagem, topo_imagem):
+    un_topo_im = cv2.undistortPoints(
+           topo_imagem, camera_matrix, dist_coeffs, P=None
+        )[0][0]
+    un_base_im = cv2.undistortPoints(
+           base_imagem, camera_matrix, dist_coeffs, P=None
+        )[0][0]
+  
+    R, _ = cv2.Rodrigues(rvec)  # rvec da calibração
+    C = (-R.T @ tvec).ravel()  # Posição da câmera no mundo (3x1)
+
+    V_t = np.array([un_topo_im[0], un_topo_im[1], 1.0])
+    V_t = (R.T @ V_t).ravel()
+
+    V_b = np.array([un_base_im[0], un_base_im[1], 1.0])
+    V_b = (R.T @ V_b).ravel()
+
+
+    def erro(vars):
+        t, z = vars
+        base_mundo_optm = C+np.array([V_t[0]*t, V_t[1]*t, z], dtype=np.float32)
+        dist_bm = np.linalg.norm(base_mundo_optm - base_mundo)
+        dist_bi = np.linalg.norm(np.cross(base_mundo_optm -C, V_b)) / np.dot(V_b, V_b)
+        return dist_bi+dist_bm
+
+
+    bounds = [(-20, 20), (-3, 3)]
+    res = minimize(erro, x0=[8, -2], bounds=bounds, method='Powell')  
+ 
+    topo_mundo=C+np.array([V_t[0]*res.x[0], V_t[1]*res.x[0],res.x[0]*V_t[2]], dtype=np.float32)   
+    base_mundo_opt= C+np.array([V_t[0]*res.x[0], V_t[1]*res.x[0], res.x[1]], dtype=np.float32)
+
+    base_marcada=C+(np.linalg.norm(np.dot(base_mundo_opt-C, V_b)) / np.dot(V_b, V_b))*V_b
+ 
+    erro_base=(abs(base_mundo[2]-base_marcada[2])+(np.dot(base_mundo[:2]-base_marcada[:2],topo_mundo[:2]-C[:2])/np.dot(topo_mundo[:2]-C[:2],topo_mundo[:2]-C[:2]))*topo_mundo[2]/np.linalg.norm(topo_mundo[:2]-C[:2]))/2
+
+    altura = np.linalg.norm(topo_mundo - base_mundo_opt)
+
+
+    projected_point, _ = cv2.projectPoints(
+        np.array(topo_mundo, dtype=np.float32), rvec, tvec, camera_matrix, dist_coeffs
+    )
+
+    return altura, topo_mundo, base_mundo_opt, projected_point, erro_base
+      
+# INÍCIO DO PROCESSAMENTO
+
+# Carregar uma única imagem (usada para todos os ids) 
+image = cv2.imread(f'Python/{caso}/Questionado.png')
 if image is None:
-    raise ValueError("Erro ao carregar a imagem. Verifique o caminho e tente novamente.")
-
-print("Imagem carregada com sucesso! Dimensões:", image.shape)
-
-# Copiar a imagem original para desenhar os pontos
-image_with_points = image.copy()
-
-# Pontos do mundo real (3D)
-object_points = np.array([
-    [1.777816873972325, -11.383767260830469, -2.444243256780114],
-    [2.8945681785967223, 0.522714080389085, 0.5499176946251676],
-    [2.596532062981489, 0.4665171334355127, 0.5453055218330748],
-    [1.1659148582125323, -1.1339534300529694, 1.2807852336263492],
-    [0.8910168591407754, -10.000975911425064, 1.2915010996641976],
-    [0.7755806556499772, -10.649530747515461, 1.3157713498008796],
-    [0.512911112427891, -12.11720248328986, 0.769295523402319],
-    [-0.5706674070392856, -12.754920181502039, 0.8456599242782763],
-    [0.4663864951716935, -11.765048740899173, -1.5662961734299108],
-    [0.48705040465295596, -11.391303369198326, -1.5672552581448622],
-    [0.5211594956183737, -10.82024420211215, -1.8472597285600165],
-    [1.67855517778878, -11.041321167514354, -2.4310801706667324],
-    [-10.613846736184268, -3.394953623381467, 3.1697043512032357],
-    [-12.754222171497936, 8.950070333874747, 4.02625085245598],
-    [0.4861633483607633, -1.6331384424901625, 1.3159872690023235],
-    [0.7376118470522629, -1.5980901296956254, 0.3002991817268862],
-    [1.1112168273927525, 12.630109158601037, 1.787037027347593],
-    [1.1681030365214833, 7.248608613386141, 0.68918623451001],
-    [3.099446145070209, -0.40627505676919146, -2.540855035616674],
-    [2.009084415318402, -5.635707789659238, -2.425720917407629],
-    [1.4435850214815755, -5.586469203350866, -2.4181853078931126],
-    [2.0525994608831004, -4.539973129349227, -2.4400229764887933],
-    [1.5028438631520067, -4.5169402213882845, -2.417906861155169],
-    [-5.259262150906426, 11.731223832125398, 5.592166789223127],
-    [-5.129170999034528, 11.541110502694835, 2.798743760608555]
-], dtype=np.float32)
-
-# Pontos da imagem (2D)
-image_points = np.array([
-    [438, 1777], [2965, 1068], [2914, 1071], [2512, 942],
-    [839, 804], [673, 791], [238, 902], [150, 927],
-    [325, 1496], [440, 1494], [601, 1557], [550, 1759],
-    [1451, 818], [2365, 857], [2361, 940], [2393, 1110],
-    [3816, 985], [3417, 1099], [2875, 1660], [1866, 1665],
-    [1816, 1644], [2078, 1654], [2024, 1631], [3061, 650],
-    [3056, 923]
-], dtype=np.float32)
-
-# Estimativa inicial da matriz da câmera
-camera_matrix = np.array([
-    [image.shape[1] // 2, 0, image.shape[1] // 2],  # f_x, c_x
-    [0, image.shape[0] // 2, image.shape[0] // 2],  # f_y, c_y
-    [0, 0, 1]
-], dtype=np.float32)
-
-# Inicializar os coeficientes de distorção
-dist_coeffs = np.zeros(5)
-
-# Resolver a calibração inicial
-_, rvec, tvec = cv2.solvePnP(object_points, image_points, camera_matrix, dist_coeffs)
-
-# Refinar calibração com calibrateCamera()
-object_points_list = [object_points]
-image_points_list = [image_points]
+    raise ValueError("Erro ao carregar a imagem.")
+print("Imagem carregada com sucesso! Dimensões:", image.shape) 
 image_size = (image.shape[1], image.shape[0])
 
-ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
-    object_points_list, image_points_list, image_size, camera_matrix, dist_coeffs, flags=cv2.CALIB_USE_INTRINSIC_GUESS
-)
+# Carregar Referência (usada para todos os ids) 
+imageRef = cv2.imread(f'Python/{caso}/Figures.png')
+if imageRef is None:
+    raise ValueError("Erro ao carregar a imagem.")
+print("Imagem carregada com sucesso! Dimensões:") 
 
-if not ret:
-    raise ValueError("Erro na calibração da câmera!")
+os.makedirs(f'Python/{caso}/Results/Seq1', exist_ok=True)
+os.makedirs(f'Python/{caso}/Results/Seq2', exist_ok=True)
+os.makedirs(f'Python/{caso}/Results/Seq3', exist_ok=True) 
 
-print("Matriz de câmera ajustada:\n", camera_matrix)
-print("\nCoeficientes de distorção ajustados:\n", dist_coeffs)
+# Ler os pontos do arquivo e agrupar por id
+object_points_dict, image_points_dict, extra_data_dict = ler_dados_txt_multi(f"Python/{caso}/dados.txt")
 
-# Projetar os pontos 3D na imagem para comparação
-projected_points, _ = cv2.projectPoints(object_points, rvecs[0], tvecs[0], camera_matrix, dist_coeffs)
+idn=0
 
-# Desenhar pontos reais da imagem (Vermelho)
-for point in image_points:
-    x, y = int(point[0]), int(point[1])
-    cv2.circle(image_with_points, (x, y), 8, (0, 0, 255), -1)  # Vermelho
+# Para cada id, realizar calibração, usando os pontos a partir de n_heights:
+for id_val in object_points_dict: 
+    print(f"\n=== Processando id: {id_val} ===")
+    # Converter todos os pontos para arrays
+    object_points = np.array(object_points_dict[id_val][:], dtype=np.float32)
+    image_points = np.array(image_points_dict[id_val][:], dtype=np.float32)
+    extra_data = np.array(extra_data_dict[id_val][:], dtype=np.float32)
 
-# Desenhar pontos projetados na imagem (Azul)
-for point in projected_points.reshape(-1, 2):
-    x, y = int(point[0]), int(point[1])
-    cv2.circle(image_with_points, (x, y), 5, (255, 0, 0), -1)  # Azul
+    if object_points.shape[0] - n_heights < 4:
+        print(f"Ignorando id {id_val}: número de pontos ({object_points.shape[0]}) insuficiente após exclusão.")
+        continue
+ 
+    # Use os pontos a partir de index n_heights para a calibração  
+    object_points_calib = object_points[n_heights:]
+    image_points_calib = image_points[n_heights:]
+    
+    # Calibração com os pontos restantes
+    camera_matrix = np.array([
+        [image_size[0] // 2, 0, image_size[0] // 2],
+        [0, image_size[1] // 2, image_size[1] // 2],
+        [0, 0, 1]
+    ], dtype=np.float32)
+    dist_coeffs = np.zeros(5)
+    object_points_list = [object_points_calib]
+    image_points_list = [image_points_calib]
+    ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
+        object_points_list, image_points_list, image_size,
+        camera_matrix, dist_coeffs, flags=cv2.CALIB_USE_INTRINSIC_GUESS
+    )
 
-# Calcular erro médio de reprojeção (RMS)
-errors = np.linalg.norm(image_points - projected_points.reshape(-1, 2), axis=1)
-mean_error = np.mean(errors)
-print("\nErro médio de reprojeção (RMS):", mean_error)
+    if not ret:
+        print(f"Erro na calibração para id {id_val}.")
+        continue
+    
+    map1, map2 = cv2.initUndistortRectifyMap(
+    camera_matrix, dist_coeffs, None, camera_matrix, image_size, cv2.CV_32FC1
+    )
 
-# Corrigir distorção na imagem
-undistorted_image = cv2.undistort(image, camera_matrix, dist_coeffs)
+    image_undistorted = cv2.undistort(image, camera_matrix, dist_coeffs)
+    image_with_points = image_undistorted.copy()
 
-if undistorted_image is None or undistorted_image.shape[0] == 0:
-    raise ValueError("Erro ao corrigir a distorção!")
+    # Projetar os pontos 3D para conferência
+    projected_points, _ = cv2.projectPoints(object_points_calib, rvecs[0], tvecs[0], camera_matrix, dist_coeffs)
+    projected_points_2d = projected_points.reshape(-1, 2)
 
-print("Imagem corrigida gerada com sucesso!")
+    # Calcular o erro de reprojeção
+    erros = np.linalg.norm(np.array(image_points_calib) - projected_points_2d, axis=1)
+    erro_medio = np.mean(erros)
 
-# Exibir imagens lado a lado
-cv2.namedWindow("Imagem Original com Pontos", cv2.WINDOW_NORMAL)
-cv2.imshow("Imagem Original com Pontos", image_with_points)
+    # Criar uma cópia da imagem para sobreposição
+    img_proj = imageRef.copy()
 
-cv2.namedWindow("Imagem Corrigida", cv2.WINDOW_NORMAL)
-cv2.imshow("Imagem Corrigida", undistorted_image)
+    # Desenhar os pontos originais medidos (em azul)
+    for pt in np.array(image_points_calib, dtype=np.float32):
+        x, y = int(pt[0]), int(pt[1])
+        tamanho = 7
+        espessura = 2
+        cor = (255, 0, 0)  # Azul em BGR
+        cv2.line(img_proj, (x - tamanho, y), (x + tamanho, y), cor, espessura)
+        cv2.line(img_proj, (x, y - tamanho), (x, y + tamanho), cor, espessura)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    # Desenhar os pontos reprojetados (em vermelho)
+    for pt in projected_points_2d:
+        cv2.circle(img_proj, (int(pt[0]), int(pt[1])), 5, (0, 0, 255), 2)  # Vermelho: (B,G,R)
 
+    # Redimensionar a imagem para caber na tela (largura máxima de 800 pixels)
+    max_width = 800
+    h, w = img_proj.shape[:2]
+    scale_factor = max_width / w if w > max_width else 1.0
+    img_proj_small = cv2.resize(img_proj, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_AREA)
 
-def calcular_altura_iterativa(camera_matrix, dist_coeffs, rvec, tvec, base_mundo, base_imagem, topo_imagem, max_iter=100000, tol=mean_error):
-    # Fixar X, Y no mundo real para o topo, igual ao da base
-    x_topo_mundo = base_mundo[0]
-    y_topo_mundo = base_mundo[1]
+    # (Dentro do loop de exibição da projeção)
 
-    # Inicializar altura do topo (inicia com a altura da base + 1, por exemplo)
-    z_topo_mundo = base_mundo[2] + 0.1
+    window_name = f"Reprojected - {id_val}"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.setMouseCallback(window_name, mouse_zoom_pan)
+    cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    # Iterar até convergir
-    for i in range(max_iter):
-        # Criar a posição do topo no mundo real com a altura ajustada
-        topo_mundo = np.array([x_topo_mundo, y_topo_mundo, z_topo_mundo], dtype=np.float32)
+    # Atualiza as dimensões da imagem base (para reprojeção)
+    current_img_h, current_img_w = img_proj.shape[:2]
 
-        # Projetar o ponto 3D do topo para 2D usando a calibração
-        projected_point, _ = cv2.projectPoints(topo_mundo, rvec, tvec, camera_matrix, dist_coeffs)
+    # Ajustar o zoom inicial para exibir a imagem inteira, se desejar:
+    rect = cv2.getWindowImageRect(window_name)  # (x, y, win_width, win_height)
+    if rect is not None:
+        _, _, win_width, win_height = rect
+        current_win_width, current_win_height = win_width, win_height
+        zoom = min(win_width / float(current_img_w), win_height / float(current_img_h))
+        if zoom < min_zoom:
+            zoom = min_zoom
 
-        # Calcular a diferença entre o topo projetado e o topo na imagem
-        error = np.linalg.norm(projected_point[0][0] - topo_imagem)
+    while True:
+        rect = cv2.getWindowImageRect(window_name)
+        if rect is None:
+            break  # janela fechada
+        _, _, win_width, win_height = rect
+        current_win_width, current_win_height = win_width, win_height
 
-        # Se a diferença for menor que a tolerância, consideramos que convergiu
-        if error < tol:
-            print(f"Convergiu após {i+1} iterações!")
+        # Redimensionar (zoom) a imagem base de projeção
+        zoomed_w = int(current_img_w * zoom)
+        zoomed_h = int(current_img_h * zoom)
+        zoomed = cv2.resize(img_proj, (zoomed_w, zoomed_h), interpolation=cv2.INTER_AREA)    
+        
+       # Calcular a região exibida (usando offset)
+        x0 = clamp(offset[0], 0, max(0, zoomed_w - current_win_width))
+        y0 = clamp(offset[1], 0, max(0, zoomed_h - current_win_height))
+        view = zoomed[y0:y0+current_win_height, x0:x0+current_win_width].copy()
+           
+        
+        cv2.imshow(window_name, view)
+        if cv2.waitKey(10) != -1:
             break
+    cv2.imwrite(f"Python/{caso}/Results/Seq1/frame{idn}.jpg", view)
 
-        # Ajuste da altura Z com base no erro total (em X e Y)
-        dy = topo_imagem[1] - projected_point[0][0][1]
+    img_questionada = image.copy()
+    for idx in range(0, n_heights):
+        pt3d = object_points[idx]
+        pt_proj, _ = cv2.projectPoints(pt3d.reshape(1, 3), rvecs[0], tvecs[0], camera_matrix, dist_coeffs)
+        x, y = int(pt_proj[0][0][0]), int(pt_proj[0][0][1])
+        # Desenha um círculo amarelo para cada ponto
+        cv2.circle(img_questionada, (x, y), 8, (0, 255, 255), 2)
+        # Opcional: coloca o número do ponto
+        cv2.putText(img_questionada, f"{idx}", (x + 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-        # Ajuste proporcional à diferença nos dois eixos
-        z_topo_mundo -= 0.001*dy/image.shape[1]  # Ajuste baseado na distância no plano da imagem
+    #window_name = f"Pontos Excluídos - ID {id_val}"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.imshow(window_name, img_questionada)
+    cv2.waitKey(0)
+    cv2.destroyWindow(window_name)
+    idn+=1
 
-        z_altura_mundo = z_topo_mundo - base_mundo[2];
+ 
 
-    return z_altura_mundo, topo_mundo
+# Após a calibração de cada id, por exemplo:
+resultados_por_id = {}  # dicionário: id_val -> list de (altura, erro_total_cm) para os pontos excluídos
 
-# Exemplo de entrada
-base_mundo = np.array([1.8676420074492026, -11.23961845569839, -2.4003256998994225], dtype=np.float32)  # Coordenada 3D da base no mundo
-base_imagem = np.array([459, 1753], dtype=np.float32)  # Coordenada 2D da base na imagem
-topo_imagem = np.array([457, 1525], dtype=np.float32)   # Coordenada 2D do topo na imagem
+print("Agora, marque o TOPO usando o mouse (zoom, pan, etc).")
+# A função abaixo abre uma janela onde o usuário marca o topo.
+mostrar_zoom_pan_marking()
+# Após a marcação, presume-se que pontos_clicados[1] foi definido no callback
+#base_imagem = base_point_2d[0][0]  # posição 2D da base (projetada)
+        
+idn=0
 
-# Calcular altura real do objeto de forma iterativa
-altura, topo_mundo = calcular_altura_iterativa(camera_matrix, dist_coeffs, rvecs[0], tvecs[0], base_mundo, base_imagem, topo_imagem)
+for id_val in object_points_dict:
+    print(f"\n=== Processando id: {id_val} ===")
+    # Converter todos os pontos para arrays
+    object_points = np.array(object_points_dict[id_val][:], dtype=np.float32)
+    image_points = np.array(image_points_dict[id_val][:], dtype=np.float32)
+    image_points += np.array([padding_x, padding_y], dtype=np.float32)
+    extra_data = np.array(extra_data_dict[id_val][:], dtype=np.float32)
 
-print("Altura do objeto no mundo real:", altura)
-print("Posição corrigida do topo no mundo real:", topo_mundo)
-print("Posição corrigida do base no mundo real:", base_mundo)
+    if object_points.shape[0] - n_heights < 4:
+        print(f"Ignorando id {id_val}: número de pontos ({object_points.shape[0]}) insuficiente após exclusão.")
+        continue
+
+    # Use os pontos a partir do índice n_heights para a calibração
+    object_points_calib = object_points[n_heights:]
+    image_points_calib = image_points[n_heights:]
+
+    image_pad = pad_image(image, padding_x, padding_y)
+    image_size = (image_pad.shape[1], image_pad.shape[0])
+
+    
+    # Calibração com os pontos restantes
+    camera_matrix = np.array([
+        [image_size[0] // 2, 0, image_size[0] // 2],
+        [0, image_size[1] // 2, image_size[1] // 2],
+        [0, 0, 1]
+    ], dtype=np.float32)
+    dist_coeffs = np.zeros(5)
+    object_points_list = [object_points_calib]
+    image_points_list = [image_points_calib]
+    ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
+        object_points_list, image_points_list, image_size,
+        camera_matrix, dist_coeffs, flags=cv2.CALIB_USE_INTRINSIC_GUESS
+    )
+    if not ret:
+        print(f"Erro na calibração para id {id_val}.")
+        continue
+
+    # Inicializa o mapeamento para correção de distorção (usado para o topo)
+    map1, map2 = cv2.initUndistortRectifyMap(
+        camera_matrix, dist_coeffs, None, camera_matrix, image_size, cv2.CV_32FC1
+    )
+
+    
+    image_pad_Ref = pad_image(imageRef, padding_x, padding_y)
+    # Undistorta a imagem e cria uma cópia para marcação
+    image_undistorted = cv2.undistort(image_pad, camera_matrix, dist_coeffs)
+    
+    image_with_points = image_undistorted.copy()
+    imageRef_undistorted = cv2.undistort(image_pad_Ref, camera_matrix, dist_coeffs)
+
+    imageRef_with_points = imageRef_undistorted.copy()
+
+
+    R, _ = cv2.Rodrigues(rvecs[0])
+    camera_position = -R.T @ tvecs[0]  # shape (3,1)
+    erros_percentuais = []
+    d_cameras=[]
+    erros_pixel = []
+
+    for i, (pt3d, pt2d,err_c) in enumerate(zip(object_points_calib, image_points_calib,extra_data)):
+                # Projeta o ponto 3D para a imagem
+        proj, _ = cv2.projectPoints(pt3d.reshape(1, 3), rvecs[0], tvecs[0], camera_matrix, dist_coeffs)
+        proj = proj[0][0]
+        erro_pixel = np.linalg.norm(proj - pt2d)
+        # Calcula a distância do ponto 3D até a câmera (em metros)
+        dist_m = np.linalg.norm(pt3d - camera_position.ravel())
+
+        # Converte erro de pixel para metros usando a razão pixel/mundo na profundidade do ponto
+        # Aproximação: calcula o deslocamento de 1 pixel na imagem para o plano do ponto
+        # Projeta o ponto 3D para a imagem, depois projeta o mesmo ponto deslocado 1 pixel na horizontal
+        pt2d_shift = pt2d + np.array([1, 0])
+
+        # Corrige a distorção de proj e pt2d
+        proj = cv2.undistortPoints(
+            np.array([[proj]], dtype=np.float32), camera_matrix, dist_coeffs, P=camera_matrix
+        )[0][0]
+        pt2d = cv2.undistortPoints(
+            np.array([[pt2d]], dtype=np.float32), camera_matrix, dist_coeffs, P=camera_matrix
+        )[0][0]
+
+        # Faz back-projection para o plano do ponto (aproximação local)
+        # Calcula a diferença em metros correspondente a 1 pixel
+        # Aqui, pode-se usar a matriz de calibração para estimar a escala:
+        fx = camera_matrix[0, 0]
+        fy = camera_matrix[1, 1]
+        
+        # Normaliza os vetores projetados e de ponto 2D        
+        proj[0]=proj[0] / (fx**2 + (proj[0])**2)**0.5
+        proj[1]=proj[1] / (fy**2 + (proj[1])**2)**0.5
+
+        pt2d[0]= pt2d[0] / (fx**2 + (pt2d[0])**2)**0.5
+        pt2d[1]= pt2d[1] / (fy**2 + (pt2d[1])**2)**0.5
+        erro_pixel = np.linalg.norm(proj - pt2d)
+        
+        # Aproximação: 1 pixel corresponde a z/fx metros no eixo x
+        erro_pct = (erro_pixel+(err_c/(dist_m))) 
+        erros_pixel.append(erro_pixel)
+        # Erro percentual
+        erros_percentuais.append(erro_pct)
+        d_cameras.append(dist_m)
+
+
+    # Supondo que erro_pct_medio já foi calculado:
+    n_points=(object_points.shape[0] - n_heights)
+    erro_pct_medio =k_values[n_points-4]* np.sqrt((n_points/(n_points-1))*np.mean(np.square(erros_percentuais)))   # transforma % em fração
+    rho = np.corrcoef(np.ravel(erros_pixel) * np.ravel(d_cameras), np.ravel(d_cameras))[0, 1]
+    # --- Processa cada ponto excluído (0 a n_heights-1) ---
+    resultados = []  # armazenará (altura, erro_total_cm) para cada ponto excluído deste id
+
+    acquisicoes = []  # para armazenar [(base_point_2d, topo_point_2d), ...] em coordenadas da imagem undistort
+
+    print(f"\nResultados para id {id_val}:")
+    for idx in range(n_heights+1):
+        # Use o ponto excluído como BASE
+        base_mundo = object_points[idx]  # ponto 3D da base
+       
+       
+        #x_base, y_base = base_point_2d[0][0]  # posição 2D da base (projetada)
+        # Registre o clique da base a partir do ponto corrigido
+        #pontos_clicados = [(int(round(x_base)), int(round(y_base)))]
+
+        base_imagem = np.array(pontos_clicados[2*idx+1], dtype=np.float32) + np.array([padding_x, padding_y], dtype=np.float32)# posição 2D da base (projetada)
+        topo_imagem = np.array(pontos_clicados[2*idx+0], dtype=np.float32) + np.array([padding_x, padding_y], dtype=np.float32)# posição 2D do topo (projetada)
+
+        # Calcular a altura e obter o topo em mundo
+        altura, topo_mundo, base_mundo, topo_point_2d, erro_marca_base = calcular_altura_iterativa(
+            camera_matrix, dist_coeffs, rvecs[0], tvecs[0],
+            base_mundo, base_imagem, topo_imagem
+        )
+        base_point_2d, _ = cv2.projectPoints(base_mundo.reshape(1, 3), rvecs[0], tvecs[0], camera_matrix, dist_coeffs)
+
+        
+        base_pt = base_point_2d[0][0]
+        topo_pt = topo_point_2d[0][0]
+        acquisicoes.append((base_pt, topo_pt))
+       
+        # Distância da base e do topo até a câmera (em metros)
+        dist_base = np.linalg.norm(base_mundo - camera_position.ravel())
+        dist_topo = np.linalg.norm(topo_mundo - camera_position.ravel())
+
+        # Erro absoluto em metros baseado em erro_pct_medio
+        erro_base_m = erro_pct_medio * dist_base
+        erro_topo_m = erro_pct_medio * dist_topo
+        
+       
+        # Soma euclidiana dos erros (em cm)
+        sigma_var = erro_base_m+erro_topo_m
+        sigma_ind= 2*(extra_data[idx][0]+erro_marca_base)/(6**0.5)
+
+        resultados.append((altura, sigma_var,sigma_ind))
+        print(f"  Altura {idx+1}: {100*altura:.1f} cm, Sigma dependente: {100*sigma_var:.1f} cm, Sigma Independente: {100*sigma_ind:.1f} cm")
+    resultados_por_id[id_val] = resultados
+    
+
+    # Continue com o restante do processamento para este id, se necessário...
+
+    img_to_show = image_undistorted.copy()
+    imgRef_to_show = imageRef_undistorted.copy()
+    # Traça as retas e marca os pontos:
+    for idx, (base_pt, topo_pt) in enumerate(acquisicoes):
+        
+        # Corrige os pontos para o sistema da imagem undistort
+        base_pt_corr = cv2.undistortPoints(
+            np.array([[base_pt]], dtype=np.float32), camera_matrix, dist_coeffs, P=camera_matrix
+        )[0][0]
+        topo_pt_corr = cv2.undistortPoints(
+            np.array([[topo_pt]], dtype=np.float32), camera_matrix, dist_coeffs, P=camera_matrix
+        )[0][0]
+
+        
+        if idx == len(acquisicoes) - 1:
+            # Desenha a reta entre base e topo corrigidos
+            cv2.line(imgRef_to_show,
+                    (int(round(base_pt_corr[0])), int(round(base_pt_corr[1]))),
+                     (int(round(topo_pt_corr[0])), int(round(topo_pt_corr[1]))),
+                     (0, 255, 0), 2)
+            # Marca o ponto base (círculo azul)
+            cv2.circle(imgRef_to_show, (int(round(base_pt_corr[0])), int(round(base_pt_corr[1]))),
+                       2, (255, 0, 0), -1)
+            # Marca o ponto topo (círculo vermelho)
+            cv2.circle(imgRef_to_show, (int(round(topo_pt_corr[0])), int(round(topo_pt_corr[1]))),
+                       2, (0, 0, 255), -1)
+        else:
+            # Desenha a reta entre base e topo corrigidos
+            cv2.line(img_to_show,
+                    (int(round(base_pt_corr[0])), int(round(base_pt_corr[1]))),
+                     (int(round(topo_pt_corr[0])), int(round(topo_pt_corr[1]))),
+                     (0, 255, 0), 2)
+            # Marca o ponto base (círculo azul)
+            cv2.circle(img_to_show, (int(round(base_pt_corr[0])), int(round(base_pt_corr[1]))),
+                       2, (255, 0, 0), -1)
+            # Marca o ponto topo (círculo vermelho)
+            cv2.circle(img_to_show, (int(round(topo_pt_corr[0])), int(round(topo_pt_corr[1]))),
+                       2, (0, 0, 255), -1)
+
+        # Exibe a imagem final resultante para o ID
+
+
+    
+    window_corrigida = f"Pontos Corrigidos (Undistort) - ID {id_val}"
+    cv2.namedWindow(window_corrigida, cv2.WINDOW_NORMAL)
+    cv2.imshow(window_corrigida, img_to_show)
+    cv2.waitKey(0)
+    cv2.imwrite(f"Python/{caso}/Results/Seq2/frame{idn}.jpg",  img_to_show)
+
+    cv2.destroyWindow(window_corrigida)
+
+    window_corrigida = f"Referência (Undistort) - ID {id_val}"
+    cv2.namedWindow(window_corrigida, cv2.WINDOW_NORMAL)
+    cv2.imshow(window_corrigida, imgRef_to_show)
+    cv2.waitKey(0)
+    cv2.destroyWindow(window_corrigida)
+    cv2.imwrite(f"Python/{caso}/Results/Seq3/frame{idn}.jpg",  imgRef_to_show)
+    idn += 1
+  # imagem undistort já disponível
+
+
+medias = []
+incertezas = []
+
+# Exibe os resultados finais para cada id
+for id_val, res in resultados_por_id.items():
+    print(f"\nResultados para id {id_val}:")
+    
+    res_util = res[:-1]
+
+    alturas = []
+    sigmas_indep = []
+    sigmas_var = []
+
+    for idx, (alt, sigma_v, sigma_i) in enumerate(res_util):
+        alturas.append(alt) 
+        sigmas_indep.append(sigma_i)
+        sigmas_var.append(sigma_v)
+
+    # Combinação considerando covariância total, exceto o último
+    x = np.array(alturas)
+    s_indep = np.array(sigmas_indep)
+    s_var = np.array(sigmas_var)
+
+    n = len(x)
+    Sigma = np.zeros((n, n))
+
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                Sigma[i, j] = s_indep[i]**2 + s_var[i]**2
+            else:
+                Sigma[i, j] = rho * s_var[i] * s_var[j]
+
+    Sigma_inv = np.linalg.inv(Sigma)
+    ones = np.ones(n)
+    numerador = ones @ Sigma_inv @ x
+    denominador = ones @ Sigma_inv @ ones
+
+    media_combinada = numerador / denominador
+    incerteza_combinada = np.sqrt(1 / denominador)
+    medias.append(media_combinada)
+    incertezas.append(incerteza_combinada)
+
+    print(f"\n  ➤ Altura combinada: {100*media_combinada:.1f} cm ± {100*incerteza_combinada:.2f} cm")
+
+# Combinação final entre todos os id_val
+pesos = 1 / np.square(incertezas)
+media_final = np.sum(pesos * np.array(medias)) / np.sum(pesos)
+incerteza_final = np.sqrt(1 / np.sum(pesos))
+
+print(f"\n=== VALOR FINAL COMBINADO ENTRE TODOS OS ID ===")
+print(f"  ➤ Altura final combinada: {100*media_final:.1f} cm ± {100*incerteza_final:.2f} cm")
+
+medias = []
+incertezas = []
+
+for id_val, res in resultados_por_id.items():
+    # ...cálculo padrão...
+    # (mantém seu código atual)
+
+# --- Altura da referência (usando apenas res[-1] de cada id) ---
+    alturas_ref = []
+    sigmas_ref = []
+
+    for id_val, res in resultados_por_id.items():
+        altura_ref, sigma_v_ref, sigma_i_ref = res[-1]
+        # Combina as incertezas (dependente + independente) em quadratura
+        sigma_ref = np.sqrt(sigma_v_ref**2 + sigma_i_ref**2)
+        alturas_ref.append(altura_ref)
+        sigmas_ref.append(sigma_ref)
+
+# Combinação ponderada das alturas de referência
+pesos_ref = 1 / np.square(sigmas_ref)
+media_ref = np.sum(pesos_ref * np.array(alturas_ref)) / np.sum(pesos_ref)
+incerteza_ref = np.sqrt(1 / np.sum(pesos_ref))
+
+print(f"\nVALOR FINAL DA REFERÊNCIA ENTRE TODOS OS ID")
+print(f"  ➤ Altura da referência: {100*media_ref:.1f} cm ± {100*incerteza_ref:.2f} cm")
