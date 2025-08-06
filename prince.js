@@ -45,10 +45,10 @@ var astorPlace = {
 };
 
 // rua
-astorPlace = {
-    lat: -22.447031,
-    lng: -43.171537
-};
+//astorPlace = {
+//    lat: -22.447031,
+//    lng: -43.171537
+//};
 
 async function initMap() {
     // Set up the map
