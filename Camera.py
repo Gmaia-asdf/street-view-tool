@@ -6,16 +6,82 @@ from scipy.optimize import root_scalar
 from scipy.optimize import minimize
 import os
 
-caso=45031
+caso="Leandro"
 
 # Defina o número de pontos iniciais que serão excluídos para a calibração
-n_heights = 6   
+n_heights = 7
+
+# Defina o valor do padding desejado 
+padding_x,padding_y = 100,100
+
+# Chute inicial para os coeficientes de distorção
+dist_coeffs0 = np.array([[0], [0],                 # k1, k2 
+                         [0], [0],                 # p1, p2
+                         [0], [0], [0],[0],        # k3, k4, k5, k6
+                         [0],[0],[0],[0],          # s1, s2, s3, s4 (thin prism)
+                         [0],[0]],                 # tau1, tau2 (tilted)
+                        dtype=np.float32)
+
+# -----------------------------------------------------------
+# 🔹 MODELO DE DISTORÇÃO
+# -----------------------------------------------------------
+use_rational_model    = True # habilita k4, k5, k6
+use_thin_prism_model  = False
+use_tilted_model      = False
+
+# -----------------------------------------------------------
+# 🔹 COEFICIENTES A FIXAR
+# -----------------------------------------------------------
+fix_p1_p2             = True
+fix_k1                = False
+fix_k2                = False
+fix_k3                = False
+fix_k4                = False
+fix_k5                = False
+fix_k6                = False
+
+# -----------------------------------------------------------
+# 🔹 INTRÍNSECOS / OUTROS
+# -----------------------------------------------------------
+fix_aspect_ratio      = False
+fix_principal_point   = True
+fix_focal_length      = False
+
+# ===========================================================
+# APLICAÇÃO DOS FLAGS AO CALIBRADOR
+# ===========================================================
+
+flags_set = 0
+flags_set |= cv2.CALIB_USE_INTRINSIC_GUESS
+if use_rational_model:
+    flags_set |= cv2.CALIB_RATIONAL_MODEL
+if use_thin_prism_model:
+    flags_set |= cv2.CALIB_THIN_PRISM_MODEL
+if use_tilted_model:
+    flags_set |= cv2.CALIB_TILTED_MODEL
+if fix_p1_p2:
+    flags_set |= cv2.CALIB_FIX_TANGENT_DIST
+if fix_k1:
+    flags_set |= cv2.CALIB_FIX_K1
+if fix_k2:
+    flags_set |= cv2.CALIB_FIX_K2
+if fix_k3:
+    flags_set |= cv2.CALIB_FIX_K3
+if fix_k4:
+    flags_set |= cv2.CALIB_FIX_K4
+if fix_k5:
+    flags_set |= cv2.CALIB_FIX_K5
+if fix_k6:
+    flags_set |= cv2.CALIB_FIX_K6
+if fix_aspect_ratio:
+    flags_set |= cv2.CALIB_FIX_ASPECT_RATIO
+if fix_principal_point:
+    flags_set |= cv2.CALIB_FIX_PRINCIPAL_POINT
+if fix_focal_length:
+    flags_set |= cv2.CALIB_FIX_FOCAL_LENGTH
 
 
-# Defina o valor do padding desejado
-padding_x = 200
-padding_y = 200
-
+# Função para adicionar padding à imagem
 def pad_image(img, pad_x, pad_y):
     return cv2.copyMakeBorder(img, pad_y, pad_y, pad_x, pad_x, cv2.BORDER_CONSTANT, value=(255, 255, 255))
 
@@ -24,7 +90,7 @@ drag_start = None
 dragging = False
 zoom = 0.1
 zoom_step = 0.1   
-min_zoom = 0.1    # Agora é possível diminuir o zoom
+min_zoom = 0.1 
 max_zoom = 5.0
 offset = np.array([0, 0], dtype=np.int32)
 pontos_clicados = []  # Armazena os cliques para BASE e TOPO
@@ -36,7 +102,7 @@ current_win_width = 0
 current_win_height = 0
 
 # Input: valor desejado da PDF da t-Student
-y_target = 1e-4  # Exemplo: defina o valor que desejar
+y_target = 1e-2  # Exemplo: defina o valor que desejar
 
 n_values = np.arange(4, 50)  # n de 2 a 31
 k_values = []
@@ -212,10 +278,10 @@ def calcular_altura_iterativa(camera_matrix, dist_coeffs, rvec, tvec, base_mundo
     R, _ = cv2.Rodrigues(rvec)  # rvec da calibração
     C = (-R.T @ tvec).ravel()  # Posição da câmera no mundo (3x1)
 
-    V_t = np.array([un_topo_im[0], un_topo_im[1], 1.0])
+    V_t = np.array([un_topo_im[0], un_topo_im[1], 1])
     V_t = (R.T @ V_t).ravel()
 
-    V_b = np.array([un_base_im[0], un_base_im[1], 1.0])
+    V_b = np.array([un_base_im[0], un_base_im[1], 1])
     V_b = (R.T @ V_b).ravel()
 
 
@@ -227,8 +293,8 @@ def calcular_altura_iterativa(camera_matrix, dist_coeffs, rvec, tvec, base_mundo
         return dist_bi+dist_bm
 
 
-    bounds = [(-20, 20), (-3, 3)]
-    res = minimize(erro, x0=[8, -2], bounds=bounds, method='Powell')  
+    bounds = [(-30, 30), (-3, 3)]
+    res = minimize(erro, x0=[0, -2], bounds=bounds, method='Powell')  
  
     topo_mundo=C+np.array([V_t[0]*res.x[0], V_t[1]*res.x[0],res.x[0]*V_t[2]], dtype=np.float32)   
     base_mundo_opt= C+np.array([V_t[0]*res.x[0], V_t[1]*res.x[0], res.x[1]], dtype=np.float32)
@@ -245,18 +311,20 @@ def calcular_altura_iterativa(camera_matrix, dist_coeffs, rvec, tvec, base_mundo
     )
 
     return altura, topo_mundo, base_mundo_opt, projected_point, erro_base
+
       
 # INÍCIO DO PROCESSAMENTO
 
 # Carregar uma única imagem (usada para todos os ids) 
 image = cv2.imread(f'Python/{caso}/Questionado.png')
+
 if image is None:
     raise ValueError("Erro ao carregar a imagem.")
 print("Imagem carregada com sucesso! Dimensões:", image.shape) 
 image_size = (image.shape[1], image.shape[0])
 
 # Carregar Referência (usada para todos os ids) 
-imageRef = cv2.imread(f'Python/{caso}/Figures.png')
+imageRef = cv2.imread(f'Python/{caso}/Referencia.png')
 if imageRef is None:
     raise ValueError("Erro ao carregar a imagem.")
 print("Imagem carregada com sucesso! Dimensões:") 
@@ -286,27 +354,25 @@ for id_val in object_points_dict:
     object_points_calib = object_points[n_heights:]
     image_points_calib = image_points[n_heights:]
     
+
     # Calibração com os pontos restantes
     camera_matrix = np.array([
-        [image_size[0] // 2, 0, image_size[0] // 2],
-        [0, image_size[1] // 2, image_size[1] // 2],
+        [image_size[0]//2, 0, image_size[0]//2 ],
+        [0, image_size[1]//2, image_size[1]//2 ],
         [0, 0, 1]
     ], dtype=np.float32)
-    dist_coeffs = np.zeros(5)
     object_points_list = [object_points_calib]
     image_points_list = [image_points_calib]
     ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
         object_points_list, image_points_list, image_size,
-        camera_matrix, dist_coeffs, flags=cv2.CALIB_USE_INTRINSIC_GUESS
+        camera_matrix, dist_coeffs0, flags=flags_set
     )
+
 
     if not ret:
         print(f"Erro na calibração para id {id_val}.")
         continue
     
-    map1, map2 = cv2.initUndistortRectifyMap(
-    camera_matrix, dist_coeffs, None, camera_matrix, image_size, cv2.CV_32FC1
-    )
 
     image_undistorted = cv2.undistort(image, camera_matrix, dist_coeffs)
     image_with_points = image_undistorted.copy()
@@ -317,7 +383,7 @@ for id_val in object_points_dict:
 
     # Calcular o erro de reprojeção
     erros = np.linalg.norm(np.array(image_points_calib) - projected_points_2d, axis=1)
-    erro_medio = np.mean(erros)
+    erro_medio = np.mean((erros)**2)**0.5
 
     # Criar uma cópia da imagem para sobreposição
     img_proj = imageRef.copy()
@@ -428,6 +494,7 @@ for id_val in object_points_dict:
     # Use os pontos a partir do índice n_heights para a calibração
     object_points_calib = object_points[n_heights:]
     image_points_calib = image_points[n_heights:]
+    extra_data_calib = extra_data[n_heights:]
 
     image_pad = pad_image(image, padding_x, padding_y)
     image_size = (image_pad.shape[1], image_pad.shape[0])
@@ -435,27 +502,21 @@ for id_val in object_points_dict:
     
     # Calibração com os pontos restantes
     camera_matrix = np.array([
-        [image_size[0] // 2, 0, image_size[0] // 2],
-        [0, image_size[1] // 2, image_size[1] // 2],
+        [(image_size[0]//2-padding_x), 0, image_size[0] // 2],
+        [0, (image_size[1]//2-padding_y), image_size[1] // 2],
         [0, 0, 1]
     ], dtype=np.float32)
-    dist_coeffs = np.zeros(5)
     object_points_list = [object_points_calib]
     image_points_list = [image_points_calib]
     ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
         object_points_list, image_points_list, image_size,
-        camera_matrix, dist_coeffs, flags=cv2.CALIB_USE_INTRINSIC_GUESS
+        camera_matrix, dist_coeffs0, flags=flags_set
     )
     if not ret:
         print(f"Erro na calibração para id {id_val}.")
         continue
 
-    # Inicializa o mapeamento para correção de distorção (usado para o topo)
-    map1, map2 = cv2.initUndistortRectifyMap(
-        camera_matrix, dist_coeffs, None, camera_matrix, image_size, cv2.CV_32FC1
-    )
-
-    
+       
     image_pad_Ref = pad_image(imageRef, padding_x, padding_y)
     # Undistorta a imagem e cria uma cópia para marcação
     image_undistorted = cv2.undistort(image_pad, camera_matrix, dist_coeffs)
@@ -472,43 +533,28 @@ for id_val in object_points_dict:
     d_cameras=[]
     erros_pixel = []
 
-    for i, (pt3d, pt2d,err_c) in enumerate(zip(object_points_calib, image_points_calib,extra_data)):
+    for i, (pt3d, pt2d,err_c) in enumerate(zip(object_points_calib, image_points_calib,extra_data_calib)):
                 # Projeta o ponto 3D para a imagem
         proj, _ = cv2.projectPoints(pt3d.reshape(1, 3), rvecs[0], tvecs[0], camera_matrix, dist_coeffs)
         proj = proj[0][0]
-        erro_pixel = np.linalg.norm(proj - pt2d)
-        # Calcula a distância do ponto 3D até a câmera (em metros)
+       
         dist_m = np.linalg.norm(pt3d - camera_position.ravel())
 
         # Converte erro de pixel para metros usando a razão pixel/mundo na profundidade do ponto
-        # Aproximação: calcula o deslocamento de 1 pixel na imagem para o plano do ponto
-        # Projeta o ponto 3D para a imagem, depois projeta o mesmo ponto deslocado 1 pixel na horizontal
-        pt2d_shift = pt2d + np.array([1, 0])
-
+        
         # Corrige a distorção de proj e pt2d
         proj = cv2.undistortPoints(
-            np.array([[proj]], dtype=np.float32), camera_matrix, dist_coeffs, P=camera_matrix
+            np.array([[proj]], dtype=np.float32), camera_matrix, dist_coeffs, P=None
         )[0][0]
         pt2d = cv2.undistortPoints(
-            np.array([[pt2d]], dtype=np.float32), camera_matrix, dist_coeffs, P=camera_matrix
+            np.array([[pt2d]], dtype=np.float32), camera_matrix, dist_coeffs, P=None
         )[0][0]
 
-        # Faz back-projection para o plano do ponto (aproximação local)
-        # Calcula a diferença em metros correspondente a 1 pixel
-        # Aqui, pode-se usar a matriz de calibração para estimar a escala:
-        fx = camera_matrix[0, 0]
-        fy = camera_matrix[1, 1]
-        
-        # Normaliza os vetores projetados e de ponto 2D        
-        proj[0]=proj[0] / (fx**2 + (proj[0])**2)**0.5
-        proj[1]=proj[1] / (fy**2 + (proj[1])**2)**0.5
-
-        pt2d[0]= pt2d[0] / (fx**2 + (pt2d[0])**2)**0.5
-        pt2d[1]= pt2d[1] / (fy**2 + (pt2d[1])**2)**0.5
         erro_pixel = np.linalg.norm(proj - pt2d)
         
         # Aproximação: 1 pixel corresponde a z/fx metros no eixo x
-        erro_pct = (erro_pixel+(err_c/(dist_m))) 
+        erro_pct = (erro_pixel**2+(err_c/(dist_m))**2)**0.5
+
         erros_pixel.append(erro_pixel)
         # Erro percentual
         erros_percentuais.append(erro_pct)
@@ -517,7 +563,10 @@ for id_val in object_points_dict:
 
     # Supondo que erro_pct_medio já foi calculado:
     n_points=(object_points.shape[0] - n_heights)
-    erro_pct_medio =k_values[n_points-4]* np.sqrt((n_points/(n_points-1))*np.mean(np.square(erros_percentuais)))   # transforma % em fração
+    erro_pct_medio = k_values[n_points-4]* np.sqrt((n_points/(n_points-1)*np.mean(np.square(erros_percentuais))))   # transforma % em fração
+    
+    print(erro_pct_medio)
+
     rho = np.corrcoef(np.ravel(erros_pixel) * np.ravel(d_cameras), np.ravel(d_cameras))[0, 1]
     # --- Processa cada ponto excluído (0 a n_heights-1) ---
     resultados = []  # armazenará (altura, erro_total_cm) para cada ponto excluído deste id
@@ -556,11 +605,10 @@ for id_val in object_points_dict:
         # Erro absoluto em metros baseado em erro_pct_medio
         erro_base_m = erro_pct_medio * dist_base
         erro_topo_m = erro_pct_medio * dist_topo
-        
        
         # Soma euclidiana dos erros (em cm)
-        sigma_var = erro_base_m+erro_topo_m
-        sigma_ind= 2*(extra_data[idx][0]+erro_marca_base)/(6**0.5)
+        sigma_var = (erro_base_m+erro_topo_m)/2
+        sigma_ind= 2*((extra_data[idx][0]**2+erro_marca_base**2)**0.5)/(6**0.5)
 
         resultados.append((altura, sigma_var,sigma_ind))
         print(f"  Altura {idx+1}: {100*altura:.1f} cm, Sigma dependente: {100*sigma_var:.1f} cm, Sigma Independente: {100*sigma_ind:.1f} cm")

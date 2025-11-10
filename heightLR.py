@@ -6,14 +6,15 @@ import matplotlib.pyplot as plt
 s_exp = 6      # Incerteza padrão experimental
 em = -1.3      # Erro sistemático
 
-s_med = 7.9    # Incerteza padrão do instrumento
-lm = 0         # Limite máximo do instrumento (usar 0 se for distribuição normal)
+s_med = 5   # Incerteza padrão do instrumento
+lm = 0        # Limite máximo do instrumento (usar 0 se for distribuição normal)
 
-a_quest = 176.9  # Altura do questionado
+a_quest = 180  # Altura do questionado
 na = 6           # Número de amostras independentes
 
-a_susp = 175     # Altura do suspeito
-ls = 5           # Limite de erro da altura do suspeito
+a_susp = 176     # Altura do suspeito
+s_susp = 3.5    # Incerteza padrão da altura do suspeito
+ls = 0          # Limite de erro da altura do suspeito
 
 # Dados da população brasileira (IBGE)
 m_pop = 173
@@ -24,7 +25,7 @@ incr = 0.1
 h = np.arange(120, 230 + incr, incr)
 
 # Distribuição normal assumindo que o suspeito é a fonte do vestígio
-desv_a = np.sqrt((1 + (1 / na)) * s_exp**2 + s_med**2)
+desv_a = np.sqrt((1 + (1 / na)) * s_exp**2 + s_med**2+s_susp**2)
 PEHa = norm.pdf(h, em + a_susp, desv_a)
 
 # Convolução com uniforme para o limite de erro do suspeito
@@ -62,8 +63,8 @@ print(f"p(E|H_b) = {p_E_Hb}")
 print(f"LLR = {LLR}")
 
 # Gráfico
-fig = plt.figure(figsize=(10, 6))
-plt.plot(h, PEHa, linewidth=2,color='blue', label="p(E|Ha): suspeito é a fonte")
+# fig = plt.figure(figsize=(10, 6), dpi=150)  # Aumenta a resolução do gráfico com dpi=150
+plt.plot(h, PEHa, linewidth=2, color='blue', label="p(E|Ha): suspeito é a fonte")
 plt.plot(h, PEHb, linewidth=2, color='red', label="p(E|Hb): outra pessoa é a fonte")
 
 plt.scatter(h[idx], PEHa[idx], color='black', marker='x')
@@ -77,8 +78,7 @@ plt.annotate(f"{p_E_Ha:.3e}", (h[idx], PEHa[idx]), textcoords="offset points", x
 plt.annotate(f"{p_E_Hb:.3e}", (h[idx], PEHb[idx]), textcoords="offset points", xytext=(0,18), ha='center', color='red', fontsize=12, fontweight='bold', bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
 
 plt.xlabel("Altura (cm)")
-plt.ylabel("Densidade de probabilidade")
-plt.title("Verossimilhança da altura observada")
+plt.ylabel("Verossimilhança")
 plt.legend()
 
 # Exibe o LLR mais à direita e acima, dentro do grid

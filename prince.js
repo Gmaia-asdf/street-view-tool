@@ -5,6 +5,7 @@ var indice;
 var dados = [];
 var act;
 var Data = [];
+var DatA = [];
 var CheckPoints = [];
 var pCheckPoints = [];
 var ntimes = [];
@@ -25,6 +26,7 @@ var Calibration = new Array();
 let popupOriginal
 let popupDoc
 let loca
+var pTimes = [];
 
 // Variáveis globais para seleção e linha dos marcadores P
 window._marcadoresPSelecionados = [];
@@ -44,6 +46,11 @@ var astorPlace = {
     lng: -43.182550
 };
 
+// var astorPlace = {
+//    lat: -16.657285,
+//    lng: -49.240549,
+//};
+
 // rua
 //astorPlace = {
 //    lat: -22.447031,
@@ -52,15 +59,19 @@ var astorPlace = {
 
 async function initMap() {
     // Set up the map
-    const {Map} = await google.maps.importLibrary("maps");
-    const {PlacesService} = await google.maps.importLibrary("places");
-    const {encoding} = await google.maps.importLibrary("geometry");
+    const { Map } = await google.maps.importLibrary("maps");
+    const { PlacesService } = await google.maps.importLibrary("places");
+    const { encoding } = await google.maps.importLibrary("geometry");
 
-    rMap = new Map(document.getElementById('rMap'),{
+    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+
+    rMap = new Map(document.getElementById('rMap'), {
         center: astorPlace,
         zoom: 19,
+        //MapId:'8e94d9d2a45feb08',
         mapTypeId: "hybrid",
-        streetViewControl: false,
+        streetViewControl: true,
         mapTypeControl: true,
         fullscreenControl: false,
         scaleControl: true,
@@ -81,11 +92,18 @@ async function initMap() {
             stylers: [{
                 visibility: 'on'
             }]
-        }, ]
+        },]
     });
     document.getElementById('rMap').style.width = '50%'
 
-    pMap = new Map(document.getElementById('pMap'),{
+
+    //  const advancedMarker = new AdvancedMarkerElement({
+    //map: rMap,
+    //    position: astorPlace2,
+    //    title: "Astor Place"
+    // });
+
+    pMap = new Map(document.getElementById('pMap'), {
         center: astorPlace,
         zoom: 19,
         mapTypeId: "hybrid",
@@ -109,11 +127,11 @@ async function initMap() {
             stylers: [{
                 visibility: 'on'
             }]
-        }, ]
+        },]
 
     });
 
-    rMap.data.setStyle(function(feature) {
+    rMap.data.setStyle(function (feature) {
         if (feature.getProperty('radius') && feature.getGeometry().getType() === 'Point') {
             return {
                 visible: false
@@ -139,11 +157,11 @@ async function initMap() {
     rPanorama = rMap.getStreetView();
     rPanorama.setOptions({
         disableDefaultUI: true,
-        linksControl: false,
+        linksControl: true,
         panControl: false,
         clickToGo: false,
         enableCloseButton: true,
-        imageDateControl: false,
+        imageDateControl: true,
         disableKeyboardShortcuts: true,
         zoomControlOptions: false,
         zoomControl: false,
@@ -160,7 +178,7 @@ async function initMap() {
     pPanorama = pMap.getStreetView()
     pPanorama.setOptions({
         linksControl: false,
-        panControl: false,
+        panControl: true,
         clickToGo: false,
         disableDefaultUI: true,
         enableCloseButton: true,
@@ -190,7 +208,43 @@ async function initMap() {
     pPanorama.setVisible(true)
     pPanorama.setVisible(false)
 
-    rMap.addListener('click', function(event) {
+    rPanorama.addListener('visible_changed', function () {
+       if (!rPanorama.getVisible()) {
+        setMapOnAll(rMap, CheckPoints);
+    } else {
+       setMapOnAll(null, CheckPoints);
+    }
+
+    });
+
+    pPanorama.addListener('visible_changed', function() {
+    if (!pPanorama.getVisible()) {
+        for (ii = 0; ii < pTimes.length; ii++) {
+            setMapOnAll(pMap, pCheckPoints[CheckPano[pTimes[ii]]])
+        }
+    } else {
+       setMapOnAll(null, pCheckPoints)
+    }
+    });
+
+
+    rPanorama.addListener('pano_changed', function () {
+        if (this.location) {
+            if (markerPanoID.length == 0) {
+                markerPanoID = this.pano;
+                sv.getPanorama({
+                    pano: this.pano
+                }, PanoSetting);
+            }
+            if (markerPanoID != this.pano) {
+                sv.getPanorama({
+                    pano: this.pano
+                }, PanoSetting);
+            }
+        }
+    });
+
+    rMap.addListener('click', function (event) {
         var rPlace = event.latLng;
         for (i = -3; i < 3; i++) {
             for (j = -3; j < 3; j++) {
@@ -217,13 +271,13 @@ async function initMap() {
     rMap.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
 
     // Bias the SearchBox results towards current map's viewport.
-    rMap.addListener('bounds_changed', function() {
+    rMap.addListener('bounds_changed', function () {
         searchBox.setBounds(rMap.getBounds());
     });
 
     // Listen for the event fired when the user selects a prediction and retrieve
     // more details for that place.
-    searchBox.addListener('places_changed', function() {
+    searchBox.addListener('places_changed', function () {
         var places = searchBox.getPlaces();
 
         if (places.length == 0) {
@@ -232,7 +286,7 @@ async function initMap() {
 
         // For each place, get the icon, name and location.
         var bounds = new google.maps.LatLngBounds();
-        places.forEach(function(place) {
+        places.forEach(function (place) {
             if (!place.geometry) {
                 console.log("Returned place contains no geometry");
                 return;
@@ -259,18 +313,18 @@ async function initMap() {
         passive: true
     }, (event) => {
         if ((// Change or remove this condition depending on your requirements.
-        event.key === 'ArrowUp' || // Move forward
-        event.key === 'ArrowDown' || // Move forward
-        event.key === 'ArrowLeft' || // Pan left
-        event.key === 'ArrowRight'// Pan right
+            event.key === 'ArrowUp' || // Move forward
+            event.key === 'ArrowDown' || // Move forward
+            event.key === 'ArrowLeft' || // Pan left
+            event.key === 'ArrowRight'// Pan right
         ) && !event.metaKey && !event.altKey && !event.ctrlKey) {
             event.stopPropagation()
         }
         ;
     }
-    , {
-        capture: true
-    }, );
+        , {
+            capture: true
+        },);
 
     // Cria a instância da ElevationService
     // elevator = new google.maps.ElevationService();
@@ -317,7 +371,7 @@ function toggleDown() {
     document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
     setMapOnAll(null, pCheckPoints)
     data = Data[CheckPano[markerPanoID]]
-    pPanorama.setVisible(false)
+    
     if (data) {
         for (ii = 0; ii < data.links.length; ii++) {
             pPano = Object.values(data.links[ii])[2]
@@ -336,6 +390,7 @@ function toggleDown() {
                         pPanorama.setPano(pTime);
                         pPanorama.setVisible(true)
                     }
+                    else{pPanorama.setVisible(false)}
                 }
             }
         }
@@ -379,7 +434,6 @@ function toggleUp() {
 
     setMapOnAll(null, pCheckPoints)
     data = Data[CheckPano[markerPanoID]]
-    pPanorama.setVisible(false)
     if (data) {
         for (ii = 0; ii < data.links.length; ii++) {
             pPano = Object.values(data.links[ii])[2]
@@ -397,6 +451,8 @@ function toggleUp() {
                         pPanorama.setPano(pTime);
                         pPanorama.setVisible(true)
                     }
+                    else{pPanorama.setVisible(false)}
+
                 }
             }
         }
@@ -417,6 +473,7 @@ function toggleUp() {
 }
 
 function processSVData(data, status) {
+
     if (status === 'OK') {
         cont = 1;
         if (indice > 0) {
@@ -449,7 +506,7 @@ function processSVData(data, status) {
                 map: rMap,
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 5,
+                    scale: 7,
                 },
                 lable: indice,
                 opacity: 1
@@ -460,7 +517,7 @@ function processSVData(data, status) {
                 map: pMap,
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 5,
+                    scale: 7,
                 },
                 lable: indice,
                 opacity: 1,
@@ -475,13 +532,16 @@ function processSVData(data, status) {
             //  ntimes = data.time.length - 1;
             Data.push(data)
 
-            checkpoint.addListener('click', function() {
 
+
+            checkpoint.addListener('click', function () {
+                pTimes = []
                 if (Markers[rPanorama.pano]) {
                     setMapOnAll(null, Markers[rPanorama.pano].Points);
                 }
 
                 rPanorama.setVisible(true);
+                setMapOnAll(null, CheckPoints)
 
                 markerPanoID = data.location.pano;
 
@@ -547,6 +607,8 @@ function processSVData(data, status) {
                                         setMapOnAll(pMap, pCheckPoints[CheckPano[pPano]])
                                     }
                                     pPanorama.setPano(pTime);
+                                    pTimes.push(pPano)
+
                                 }
                             }
                         }
@@ -554,10 +616,10 @@ function processSVData(data, status) {
                     pPanorama.setVisible(true)
                     if (!pTime) {
                         pPanorama.setVisible(false);
-                    } else {}
+                    } else { }
 
                     rPanorama.setVisible(true);
-
+                    setMapOnAll(null, CheckPoints)
                     if (Markers[pTime] && document.getElementById('rMap').style.width == '50%') {
                         setMapOnAll(pMap, Markers[pTime].Points);
                         //setMapOnAll(pMap, Markers[pPanorama.pano].Pairs);
@@ -566,7 +628,7 @@ function processSVData(data, status) {
 
             });
 
-            pcheckpoint.addListener('click', function() {
+            pcheckpoint.addListener('click', function () {
                 var markerPanoID = data.location.pano;
 
                 if (rPanorama.pano != markerPanoID) {
@@ -590,6 +652,7 @@ function processSVData(data, status) {
                             pPanoramas = data.time
                             pPanorama.setPano(Object.values(pPanoramas[pntimes])[0])
                             pPanorama.setVisible(true);
+                            setMapOnAll(null, pCheckPoints)
 
                         }
                     } else {
@@ -597,6 +660,7 @@ function processSVData(data, status) {
                         pPanoramas = data.time;
                         pntimes = data.time.length - 1;
                         rPanorama.setVisible(true);
+                        setMapOnAll(null, CheckPoints)
                     }
                     if (Markers[pPanorama.pano]) {
                         setMapOnAll(pMap, Markers[pPanorama.pano].Points);
@@ -615,6 +679,66 @@ function processSVData(data, status) {
     }
 
 }
+
+function PanoSetting(data, status) {
+    if (status === 'OK') {
+        pTimes = []
+        markerPanoID = data.location.pano;
+        DatA = data
+        if (ntimes.length != 0) {
+            Pano = Object.values(rPanoramas[ntimes])[1];
+            aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
+            var stime = [];
+            for (ii = 0; ii < data.time.length; ii++) {
+                sTime = JSON.stringify(Object.values(data.time[ii])[1])
+                if (sTime === aTime) {
+                    ntimes = ii;
+                    stime = 1;
+                }
+            }
+            if (stime == 1) {
+                rPanoramas = data.time
+                rPanorama.setPano(Object.values(rPanoramas[ntimes])[0])
+            } else {
+                if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+                    if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+                        setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                    }
+                }
+
+                rPanorama.setPano(markerPanoID);
+                rPanoramas = data.time;
+                ntimes = data.time.length - 1;
+                if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+                    if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+                        setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+                    }
+                }
+            }
+        } else {
+            rPanorama.setPano(markerPanoID);
+            rPanoramas = data.time;
+            ntimes = data.time.length - 1;
+        }
+
+        if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
+            setMapOnAll(rMap, Markers[rPanorama.pano].Points);
+        }
+        document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
+
+        if (data.links.length != 0) {
+            pPano = Object.values(data.links[0])[2]
+            pPanorama.setPano(pPano);
+            pPanorama.setVisible(true)
+            pLinks=0;
+        }
+        else {
+            pPanorama.setVisible(false);
+        }
+
+    }
+}
+
 
 function sleep(milliseconds) {
     var start = new Date().getTime();
@@ -645,6 +769,7 @@ function duplicate(s) {
 
             rPanorama.setVisible(false)
             rPanorama.setVisible(true)
+
             document.getElementById('pMap').style.display = 'none'
 
             if (document.getElementById('centroR') != undefined) {
@@ -801,7 +926,7 @@ function download(filename, text) {
 
 function saveJSON(points) {
     let data = points;
-    let bl = new Blob([data],{
+    let bl = new Blob([data], {
         type: "text/html"
     });
     let a = document.createElement("a");
@@ -829,13 +954,13 @@ function handleFileSelect(evt) {
     var f = files[0];
     var reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         // Aqui você recebe o conteúdo do TXT como string:
         var conteudo = e.target.result;
         LoadFile(txtParaObjeto(conteudo))
     };
     reader.readAsText(f);
-    
+
 }
 
 function txtParaObjeto(conteudo) {
@@ -846,29 +971,29 @@ function txtParaObjeto(conteudo) {
     }
     );
     return objeto;
-    
+
 }
 
-function LoadFile(pontos) {  
+function LoadFile(pontos) {
     for (q = 0; q < pontos.length; q++) {
-        sv.getPanoramaById({ pano: pontos[q][0]},processSVData);
-        sv.getPanoramaById({ pano: pontos[q][1]},processSVData);
+        sv.getPanoramaById({ pano: pontos[q][0] }, processSVData);
+        sv.getPanoramaById({ pano: pontos[q][1] }, processSVData);
         rPanorama.setPano(pontos[q][0])
         rPanorama.setPov({
-          heading: parseFloat(pontos[q][8]),
-          pitch: parseFloat(pontos[q][10])
+            heading: parseFloat(pontos[q][8]),
+            pitch: parseFloat(pontos[q][10])
         });
         pPanorama.setPano(pontos[q][1])
         pPanorama.setPov({
-          heading: parseFloat(pontos[q][9]),
-          pitch: parseFloat(pontos[q][11])
+            heading: parseFloat(pontos[q][9]),
+            pitch: parseFloat(pontos[q][11])
         });
         adcElementoC()
-        popupOriginal.document.getElementById("image-original").children[q+1].style.left= pontos[q][5] - SVO.markerWidth/4+1 + "px"
-        popupOriginal.document.getElementById("image-original").children[q+1].style.top= pontos[q][6] - SVO.markerWidth/4+1 + "px"
-        
+        popupOriginal.document.getElementById("image-original").children[q + 1].style.left = pontos[q][5] - SVO.markerWidth / 4 + 1 + "px"
+        popupOriginal.document.getElementById("image-original").children[q + 1].style.top = pontos[q][6] - SVO.markerWidth / 4 + 1 + "px"
+
     }
-    
+
 }
 
 function cartesian(lat2, lon2) {
@@ -975,7 +1100,7 @@ function distanceGoogle(point1, point2) {
 function LocationElevation(location, elevator) {
     return elevator.getElevationForLocations({
         locations: [location]
-    }).then( ({results}) => {
+    }).then(({ results }) => {
         if (results[0]) {
             return results[0].elevation;
             // Retorna a elevação
@@ -983,7 +1108,7 @@ function LocationElevation(location, elevator) {
             throw new Error("No results found");
         }
     }
-    ).catch( (error) => {
+    ).catch((error) => {
         console.error("Elevation service failed due to:", error);
         return null;
     }
