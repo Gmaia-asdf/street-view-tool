@@ -3,18 +3,18 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 # PARÂMETROS DE ENTRADA EM CENTÍMETROS
-s_exp = 6      # Incerteza padrão experimental
-em = -1.3      # Erro sistemático
+s_exp = 6    # Incerteza padrão experimental
+em =  -1.3    # Erro sistemático
 
-s_med = 5   # Incerteza padrão do instrumento
+s_med = 2   # Incerteza padrão do instrumento
 lm = 0        # Limite máximo do instrumento (usar 0 se for distribuição normal)
 
-a_quest = 180  # Altura do questionado
-na = 6           # Número de amostras independentes
+a_quest = 175.3  # Altura do questionado
+na = 1           # Número de amostras independentes
 
-a_susp = 176     # Altura do suspeito
-s_susp = 3.5    # Incerteza padrão da altura do suspeito
-ls = 0          # Limite de erro da altura do suspeito
+a_susp = 180     # Altura do suspeito
+s_susp = 0    # Incerteza padrão da altura do suspeito
+ls = 2.5          # Limite de erro da altura do suspeito
 
 # Dados da população brasileira (IBGE)
 m_pop = 173
