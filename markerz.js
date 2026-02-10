@@ -154,7 +154,7 @@ adcElementoT = function () {
 
     for (ii = 0; ii < 2; ii++) {
 
-        Panorama = oPanorama[ii];
+        var Panorama = oPanorama[ii];
         var rul = "P"
         Name = Panorama.getPano() + rul
 
