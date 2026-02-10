@@ -27,6 +27,7 @@ let popupOriginal
 let popupDoc
 let loca
 var pTimes = [];
+var plinks=0
 
 // Variáveis globais para seleção e linha dos marcadores P
 window._marcadoresPSelecionados = [];
@@ -254,11 +255,12 @@ async function initMap() {
      const self = this;    
     setTimeout(() => {
         if(this.streetViewDataProviders!=rPanorama.streetViewDataProviders){
-            this.setVisible(false);
+            this.setPano(rPanorama.links[plinks].pano);
+              plinks=(plinks+1)%rPanorama.links.length;
         }
         if (this.pano==rPanorama.pano){
-
-              this.setPano(rPanorama.links[0].pano);
+              this.setPano(rPanorama.links[plinks].pano);
+              plinks=(plinks+1)%rPanorama.links.length;
         }
     }, 50);       
   });
