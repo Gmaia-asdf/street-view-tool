@@ -209,12 +209,12 @@ async function initMap() {
     pPanorama.setVisible(false)
 
     rPanorama.addListener('visible_changed', function () {
-       if (!rPanorama.getVisible()) {
+    if (!rPanorama.getVisible()) {
         setMapOnAll(rMap, CheckPoints);
+        
     } else {
-       setMapOnAll(null, CheckPoints);
+       setMapOnAll(null, CheckPoints); 
     }
-
     });
 
     pPanorama.addListener('visible_changed', function() {
@@ -228,23 +228,42 @@ async function initMap() {
     });
 
 
-    rPanorama.addListener('pano_changed', function () {
+    rPanorama.addListener("position_changed", function () {   
+        
+        const self = this;    
+    setTimeout(() => {
         if (this.location) {
             if (markerPanoID.length == 0) {
-                markerPanoID = this.pano;
+                markerPanoID = this.getPano()
                 sv.getPanorama({
-                    pano: this.pano
-                }, PanoSetting);
+                    pano: this.getPano()
+                }, rPanoSetting);
             }
-            if (markerPanoID != this.pano) {
-                sv.getPanorama({
-                    pano: this.pano
-                }, PanoSetting);
+            else if (markerPanoID != this.getPano()) {
+                markerPanoID = this.getPano()
+               sv.getPanorama({
+                    pano: this.getPano()
+                }, rPanoSetting);
             }
         }
+        }, 50); 
     });
 
-    rMap.addListener('click', function (event) {
+
+  pPanorama.addListener("position_changed", function () {
+     const self = this;    
+    setTimeout(() => {
+        if(this.streetViewDataProviders!=rPanorama.streetViewDataProviders){
+            this.setVisible(false);
+        }
+        if (this.pano==rPanorama.pano){
+
+              this.setPano(rPanorama.links[0].pano);
+        }
+    }, 50);       
+  });
+
+   /*  rMap.addListener('click', function (event) {
         var rPlace = event.latLng;
         for (i = -3; i < 3; i++) {
             for (j = -3; j < 3; j++) {
@@ -263,7 +282,7 @@ async function initMap() {
                 lng: CheckPoints[0].position.lng(),
             };
         }
-    });
+    }); */
 
     // Crea// the search box and link it to the UI element.
     var input = document.getElementById('pac-input');
@@ -472,225 +491,225 @@ function toggleUp() {
 
 }
 
-function processSVData(data, status) {
+// function processSVData(data, status) {
 
-    if (status === 'OK') {
-        cont = 1;
-        if (indice > 0) {
-            for (ii = 0; ii < indice; ii++) {
-                if ((data.location.latLng.lng() == meusPontos[ii].lng && data.location.latLng.lat() == meusPontos[ii].lat)) {
-                    cont++
-                }
-            }
-        }
-        if (indice > 0 && cont == 1) {
-            meusPontos[indice] = {
-                lng: data.location.latLng.lng(),
-                lat: data.location.latLng.lat()
-            };
-            indice++
-        }
-        if (indice == 0) {
-            meusPontos[indice] = {
-                lng: data.location.latLng.lng(),
-                lat: data.location.latLng.lat()
+//     if (status === 'OK') {
+//         cont = 1;
+//         if (indice > 0) {
+//             for (ii = 0; ii < indice; ii++) {
+//                 if ((data.location.latLng.lng() == meusPontos[ii].lng && data.location.latLng.lat() == meusPontos[ii].lat)) {
+//                     cont++
+//                 }
+//             }
+//         }
+//         if (indice > 0 && cont == 1) {
+//             meusPontos[indice] = {
+//                 lng: data.location.latLng.lng(),
+//                 lat: data.location.latLng.lat()
+//             };
+//             indice++
+//         }
+//         if (indice == 0) {
+//             meusPontos[indice] = {
+//                 lng: data.location.latLng.lng(),
+//                 lat: data.location.latLng.lat()
 
-            };
+//             };
 
-            indice = 1;
-        }
-        if (cont == 1) {
-            //  dados = dados + data.location.pano + " " + data.location.latLng.lat() + " " + data.location.latLng.lng() + " " + data.tiles.originHeading + " " + data.tiles.originPitch + "\r\n";
-            checkpoint = new google.maps.Marker({
-                position: data.location.latLng,
-                map: rMap,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 7,
-                },
-                lable: indice,
-                opacity: 1
-            });
+//             indice = 1;
+//         }
+//         if (cont == 1) {
+//             //  dados = dados + data.location.pano + " " + data.location.latLng.lat() + " " + data.location.latLng.lng() + " " + data.tiles.originHeading + " " + data.tiles.originPitch + "\r\n";
+//             checkpoint = new google.maps.Marker({
+//                 position: data.location.latLng,
+//                 map: rMap,
+//                 icon: {
+//                     path: google.maps.SymbolPath.CIRCLE,
+//                     scale: 7,
+//                 },
+//                 lable: indice,
+//                 opacity: 1
+//             });
 
-            pcheckpoint = new google.maps.Marker({
-                position: data.location.latLng,
-                map: pMap,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 7,
-                },
-                lable: indice,
-                opacity: 1,
-            });
+//             pcheckpoint = new google.maps.Marker({
+//                 position: data.location.latLng,
+//                 map: pMap,
+//                 icon: {
+//                     path: google.maps.SymbolPath.CIRCLE,
+//                     scale: 7,
+//                 },
+//                 lable: indice,
+//                 opacity: 1,
+//             });
 
-            // setMapOnAll(null, pCheckPoints);
-            if (Markers[rPanorama.pano]) {
-                setMapOnAll(null, Markers[rPanorama.pano].Points);
-            }
-            // rPanorama.setPano(data.location.pano)
-            // rPanoramas = data.time;
-            //  ntimes = data.time.length - 1;
-            Data.push(data)
+//             // setMapOnAll(null, pCheckPoints);
+//             if (Markers[rPanorama.pano]) {
+//                 setMapOnAll(null, Markers[rPanorama.pano].Points);
+//             }
+//             // rPanorama.setPano(data.location.pano)
+//             // rPanoramas = data.time;
+//             //  ntimes = data.time.length - 1;
+//             Data.push(data)
 
 
 
-            checkpoint.addListener('click', function () {
-                pTimes = []
-                if (Markers[rPanorama.pano]) {
-                    setMapOnAll(null, Markers[rPanorama.pano].Points);
-                }
+// /*             checkpoint.addListener('click', function () {
+//                 pTimes = []
+//                 if (Markers[rPanorama.pano]) {
+//                     setMapOnAll(null, Markers[rPanorama.pano].Points);
+//                 }
 
-                rPanorama.setVisible(true);
-                setMapOnAll(null, CheckPoints)
+//                 rPanorama.setVisible(true);
+//                 setMapOnAll(null, CheckPoints)
 
-                markerPanoID = data.location.pano;
+//                 markerPanoID = data.location.pano;
 
-                if (rPanorama.pano != markerPanoID) {
+//                 if (rPanorama.pano != markerPanoID) {
 
-                    if (ntimes.length != 0) {
-                        Pano = Object.values(rPanoramas[ntimes])[1];
-                        aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
-                        var stime = [];
-                        for (ii = 0; ii < data.time.length; ii++) {
-                            sTime = JSON.stringify(Object.values(data.time[ii])[1])
-                            if (sTime === aTime) {
-                                ntimes = ii;
-                                stime = 1;
-                            }
-                        }
-                        if (stime == 1) {
-                            rPanoramas = data.time
-                            rPanorama.setPano(Object.values(rPanoramas[ntimes])[0])
-                        } else {
-                            if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
-                                if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
-                                    setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                                }
-                            }
+//                     if (ntimes.length != 0) {
+//                         Pano = Object.values(rPanoramas[ntimes])[1];
+//                         aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
+//                         var stime = [];
+//                         for (ii = 0; ii < data.time.length; ii++) {
+//                             sTime = JSON.stringify(Object.values(data.time[ii])[1])
+//                             if (sTime === aTime) {
+//                                 ntimes = ii;
+//                                 stime = 1;
+//                             }
+//                         }
+//                         if (stime == 1) {
+//                             rPanoramas = data.time
+//                             rPanorama.setPano(Object.values(rPanoramas[ntimes])[0])
+//                         } else {
+//                             if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+//                                 if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+//                                     setMapOnAll(null, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+//                                 }
+//                             }
 
-                            rPanorama.setPano(markerPanoID);
-                            rPanoramas = data.time;
-                            ntimes = data.time.length - 1;
-                            if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
-                                if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
-                                    setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
-                                }
-                            }
-                        }
-                    } else {
-                        rPanorama.setPano(markerPanoID);
-                        rPanoramas = data.time;
-                        ntimes = data.time.length - 1;
-                    }
+//                             rPanorama.setPano(markerPanoID);
+//                             rPanoramas = data.time;
+//                             ntimes = data.time.length - 1;
+//                             if (Markers[Object.values(rPanoramas[ntimes])[1]] && document.getElementById('rMap').style.width == '100%') {
+//                                 if (Markers[Object.values(rPanoramas[ntimes])[1]]) {
+//                                     setMapOnAll(rMap, Markers[Object.values(rPanoramas[ntimes])[1]].Pairs);
+//                                 }
+//                             }
+//                         }
+//                     } else {
+//                         rPanorama.setPano(markerPanoID);
+//                         rPanoramas = data.time;
+//                         ntimes = data.time.length - 1;
+//                     }
 
-                    if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
-                        setMapOnAll(rMap, Markers[rPanorama.pano].Points);
-                    }
-                    document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
+//                     if (Markers[rPanorama.pano] && document.getElementById('rMap').style.width == '50%') {
+//                         setMapOnAll(rMap, Markers[rPanorama.pano].Points);
+//                     }
+//                     document.getElementsByName('Date')[0].value = Object.values(rPanoramas[ntimes])[1]
 
-                    setMapOnAll(null, pCheckPoints)
+//                     setMapOnAll(null, pCheckPoints)
 
-                    for (ii = 0; ii < data.links.length; ii++) {
-                        pPano = Object.values(data.links[ii])[2]
-                        tdata = Data[CheckPano[pPano]]
-                        if (tdata) {
-                            var pTime = [];
-                            aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
-                            for (jj = 0; jj < tdata.time.length; jj++) {
-                                sTime = JSON.stringify(Object.values(tdata.time[jj])[1])
-                                if (sTime === aTime) {
-                                    pTime = Object.values(tdata.time[jj])[0];
-                                    pntimes = jj;
-                                    pPanoramas = tdata.time
+//                     for (ii = 0; ii < data.links.length; ii++) {
+//                         pPano = Object.values(data.links[ii])[2]
+//                         tdata = Data[CheckPano[pPano]]
+//                         if (tdata) {
+//                             var pTime = [];
+//                             aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
+//                             for (jj = 0; jj < tdata.time.length; jj++) {
+//                                 sTime = JSON.stringify(Object.values(tdata.time[jj])[1])
+//                                 if (sTime === aTime) {
+//                                     pTime = Object.values(tdata.time[jj])[0];
+//                                     pntimes = jj;
+//                                     pPanoramas = tdata.time
 
-                                    if (document.getElementById('rMap').style.width == '50%') {
-                                        setMapOnAll(pMap, pCheckPoints[CheckPano[pPano]])
-                                    }
-                                    pPanorama.setPano(pTime);
-                                    pTimes.push(pPano)
+//                                     if (document.getElementById('rMap').style.width == '50%') {
+//                                         setMapOnAll(pMap, pCheckPoints[CheckPano[pPano]])
+//                                     }
+//                                     pPanorama.setPano(pTime);
+//                                     pTimes.push(pPano)
 
-                                }
-                            }
-                        }
-                    }
-                    pPanorama.setVisible(true)
-                    if (!pTime) {
-                        pPanorama.setVisible(false);
-                    } else { }
+//                                 }
+//                             }
+//                         }
+//                     }
+//                     pPanorama.setVisible(true)
+//                     if (!pTime) {
+//                         pPanorama.setVisible(false);
+//                     } else { }
 
-                    rPanorama.setVisible(true);
-                    setMapOnAll(null, CheckPoints)
-                    if (Markers[pTime] && document.getElementById('rMap').style.width == '50%') {
-                        setMapOnAll(pMap, Markers[pTime].Points);
-                        //setMapOnAll(pMap, Markers[pPanorama.pano].Pairs);
-                    }
-                }
+//                     rPanorama.setVisible(true);
+//                     setMapOnAll(null, CheckPoints)
+//                     if (Markers[pTime] && document.getElementById('rMap').style.width == '50%') {
+//                         setMapOnAll(pMap, Markers[pTime].Points);
+//                         //setMapOnAll(pMap, Markers[pPanorama.pano].Pairs);
+//                     }
+//                 }
 
-            });
+//             });
 
-            pcheckpoint.addListener('click', function () {
-                var markerPanoID = data.location.pano;
+//             pcheckpoint.addListener('click', function () {
+//                 markerPanoID = data.location.pano;
 
-                if (rPanorama.pano != markerPanoID) {
-                    if (Markers[pPanorama.pano]) {
-                        setMapOnAll(null, Markers[pPanorama.pano].Points);
-                        //  setMapOnAll(null, Markers[pPanorama.pano].Pairs);
-                        //  setMapOnAll(null, Markers[pPanorama.pano].Matches);
-                    }
-                    if (pntimes.length != 0) {
-                        Pano = Object.values(pPanoramas[pntimes])[1];
-                        aTime = JSON.stringify(Object.values(pPanoramas[pntimes])[1]);
-                        var stime = [];
-                        for (ii = 0; ii < data.time.length; ii++) {
-                            sTime = JSON.stringify(Object.values(data.time[ii])[1])
-                            if (sTime === aTime) {
-                                pntimes = ii;
-                                stime = 1;
-                            }
-                        }
-                        if (stime == 1) {
-                            pPanoramas = data.time
-                            pPanorama.setPano(Object.values(pPanoramas[pntimes])[0])
-                            pPanorama.setVisible(true);
-                            setMapOnAll(null, pCheckPoints)
+//                 if (rPanorama.pano != markerPanoID) {
+//                     if (Markers[pPanorama.pano]) {
+//                         setMapOnAll(null, Markers[pPanorama.pano].Points);
+//                         //  setMapOnAll(null, Markers[pPanorama.pano].Pairs);
+//                         //  setMapOnAll(null, Markers[pPanorama.pano].Matches);
+//                     }
+//                     if (pntimes.length != 0) {
+//                         Pano = Object.values(pPanoramas[pntimes])[1];
+//                         aTime = JSON.stringify(Object.values(pPanoramas[pntimes])[1]);
+//                         var stime = [];
+//                         for (ii = 0; ii < data.time.length; ii++) {
+//                             sTime = JSON.stringify(Object.values(data.time[ii])[1])
+//                             if (sTime === aTime) {
+//                                 pntimes = ii;
+//                                 stime = 1;
+//                             }
+//                         }
+//                         if (stime == 1) {
+//                             pPanoramas = data.time
+//                             pPanorama.setPano(Object.values(pPanoramas[pntimes])[0])
+//                             pPanorama.setVisible(true);
+//                             setMapOnAll(null, pCheckPoints)
 
-                        }
-                    } else {
-                        pPanorama.setPano(markerPanoID);
-                        pPanoramas = data.time;
-                        pntimes = data.time.length - 1;
-                        rPanorama.setVisible(true);
-                        setMapOnAll(null, CheckPoints)
-                    }
-                    if (Markers[pPanorama.pano]) {
-                        setMapOnAll(pMap, Markers[pPanorama.pano].Points);
-                        //  setMapOnAll(pMap, Markers[pPanorama.pano].Pairs);
-                        //  setMapOnAll(pMap, Markers[pPanorama.pano].Matches);
-                    }
-                }
+//                         }
+//                     } else {
+//                         pPanorama.setPano(markerPanoID);
+//                         pPanoramas = data.time;
+//                         pntimes = data.time.length - 1;
+//                         rPanorama.setVisible(true);
+//                         setMapOnAll(null, CheckPoints)
+//                     }
+//                     if (Markers[pPanorama.pano]) {
+//                         setMapOnAll(pMap, Markers[pPanorama.pano].Points);
+//                         //  setMapOnAll(pMap, Markers[pPanorama.pano].Pairs);
+//                         //  setMapOnAll(pMap, Markers[pPanorama.pano].Matches);
+//                     }
+//                 }
 
-            });
+//             }); */
 
-            CheckPano[data.location.pano] = indice - 1
-            pCheckPoints.push(pcheckpoint)
-            CheckPoints.push(checkpoint)
-        }
-    } else {//console.error('Street View data not found for this location.');
-    }
+//             CheckPano[data.location.pano] = indice - 1
+//             pCheckPoints.push(pcheckpoint)
+//             CheckPoints.push(checkpoint)
+//         }
+//     } else {//console.error('Street View data not found for this location.');
+//     }
 
-}
+// }
 
-function PanoSetting(data, status) {
+function rPanoSetting(data, status) {
     if (status === 'OK') {
         pTimes = []
         markerPanoID = data.location.pano;
         DatA = data
         if (ntimes.length != 0) {
             Pano = Object.values(rPanoramas[ntimes])[1];
-            aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
+            var aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
             var stime = [];
             for (ii = 0; ii < data.time.length; ii++) {
-                sTime = JSON.stringify(Object.values(data.time[ii])[1])
+                var sTime = JSON.stringify(Object.values(data.time[ii])[1])
                 if (sTime === aTime) {
                     ntimes = ii;
                     stime = 1;
@@ -728,14 +747,45 @@ function PanoSetting(data, status) {
 
         if (data.links.length != 0) {
             pPano = Object.values(data.links[0])[2]
+            sv.getPanorama({
+                    pano: pPano
+            }, pPanoSetting);
             pPanorama.setPano(pPano);
-            pPanorama.setVisible(true)
-            pLinks=0;
+          pPanorama.setVisible(true)
         }
         else {
             pPanorama.setVisible(false);
         }
 
+    }
+}
+
+function pPanoSetting(data, status) {
+    if (status === 'OK') {
+        pTimes = []
+        pPanoramas = data.time
+        if (ntimes.length != 0) {
+                        //Pano = Object.values(rPanoramas[pntimes])[1];
+                        aTime = JSON.stringify(Object.values(rPanoramas[ntimes])[1]);
+                        var stime = [];
+                        for (ii = 0; ii < data.time.length; ii++) {
+                            sTime = JSON.stringify(Object.values(data.time[ii])[1])
+                            if (sTime === aTime) {
+                                pntimes = ii;
+                                stime = 1;
+                            }
+                        }
+                        if (stime == 1) {
+                            pPanorama.setPano(Object.values(pPanoramas[pntimes])[0])
+                            pPanorama.setVisible(true);
+                            setMapOnAll(null, pCheckPoints)
+                        }
+                    } else {
+                        pPanorama.setPano(data.location.pano);
+                        pntimes = data.time.length - 1;
+                        rPanorama.setVisible(true);
+                        setMapOnAll(null, CheckPoints)
+                    }
     }
 }
 
@@ -975,24 +1025,34 @@ function txtParaObjeto(conteudo) {
 }
 
 function LoadFile(pontos) {
+    rPanorama.setVisible(false)
+    pPanorama.setVisible(false)
     for (q = 0; q < pontos.length; q++) {
         sv.getPanoramaById({ pano: pontos[q][0] }, processSVData);
         sv.getPanoramaById({ pano: pontos[q][1] }, processSVData);
+        if (pontos[q][0] != rPanorama.pano) {
         rPanorama.setPano(pontos[q][0])
+        }
+
         rPanorama.setPov({
             heading: parseFloat(pontos[q][8]),
             pitch: parseFloat(pontos[q][10])
         });
+        if (pontos[q][1] != pPanorama.pano) {
         pPanorama.setPano(pontos[q][1])
+        }
         pPanorama.setPov({
             heading: parseFloat(pontos[q][9]),
             pitch: parseFloat(pontos[q][11])
         });
+        //sleep(1000)
         adcElementoC()
         popupOriginal.document.getElementById("image-original").children[q + 1].style.left = pontos[q][5] - SVO.markerWidth / 4 + 1 + "px"
         popupOriginal.document.getElementById("image-original").children[q + 1].style.top = pontos[q][6] - SVO.markerWidth / 4 + 1 + "px"
 
     }
+    rPanorama.setVisible(true)
+    pPanorama.setVisible(true)
 
 }
 
