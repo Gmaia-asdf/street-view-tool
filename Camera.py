@@ -6,10 +6,10 @@ from scipy.optimize import root_scalar
 from scipy.optimize import minimize
 import os
 
-caso="Leandro"
+caso="ICCE"
 
 # Defina o número de pontos iniciais que serão excluídos para a calibração
-n_heights = 7
+n_heights = 1
 
 # Defina o valor do padding desejado 
 padding_x,padding_y = 100,100
@@ -18,14 +18,14 @@ padding_x,padding_y = 100,100
 dist_coeffs0 = np.array([[0], [0],                 # k1, k2 
                          [0], [0],                 # p1, p2
                          [0], [0], [0],[0],        # k3, k4, k5, k6
-                         [0],[0],[0],[0],          # s1, s2, s3, s4 (thin prism)
+                         [0],[0],[0],[0],          # s1, s2, s3, s4 (thin prism) 
                          [0],[0]],                 # tau1, tau2 (tilted)
                         dtype=np.float32)
 
 # -----------------------------------------------------------
 # 🔹 MODELO DE DISTORÇÃO
 # -----------------------------------------------------------
-use_rational_model    = True # habilita k4, k5, k6
+use_rational_model    = False  # habilita k4, k5, k6
 use_thin_prism_model  = False
 use_tilted_model      = False
 
