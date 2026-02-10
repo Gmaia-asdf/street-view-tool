@@ -1,11 +1,11 @@
 function solver(Calibration) {
 
-    var funcao = function(params, Pr, Pp, Cr, Cp, Nv) {
+    var funcao = function (params, Pr, Pp, Cr, Cp, Nv) {
 
         return (((params[0] * (Pr[1] - Cr[1]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[1]) - (params[0] * (Pp[1] - Cp[1]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[1])) * ((params[0] * (Pr[1] - Cr[1]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[1]) - (params[0] * (Pp[1] - Cp[1]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[1])) + ((params[0] * (Pr[0] - Cr[0]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[0]) - (params[0] * (Pp[0] - Cp[0]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[0])) * ((params[0] * (Pr[0] - Cr[0]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[0]) - (params[0] * (Pp[0] - Cp[0]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[0])));
     };
 
-    var objective = function(params) {
+    var objective = function (params) {
         var total = 0.0;
         for (var i = 0; i < Calibration.Pt[0].length; ++i) {
             var resultThisDatum = funcao(params, Calibration.Pt[0][i], Calibration.Pt[1][i], Calibration.Cm[0][i], Calibration.Cm[1][i], Calibration.Nv[i]);
@@ -18,7 +18,7 @@ function solver(Calibration) {
     var initial = [3, 0];
     var minimiser = numeric.uncmin(objective, initial);
 
-    var TtoZ = new Array(24.7210645292706,3.85430803919157,2.26831429504208,1.78799800829126,1.56588077031271,1.43977787235914,1.35902263974776,1.30306304129452,1.26207205498723,1.23078550392891,1.20613845263661,1.18622896675453,1.16981585969576,1.15605543082363,1.14435451785446,1.13428412521363,1.12552641540871,1.11784096028684,1.11104256561747,1.10498629506257,1.09955710991186,1.09466254780588,1.09022745000777,1.08619009894154,1.08249934511727,1.07911244012803,1.07599338140668,1.07311163318891,1.07044112763907,1.06795947711349);
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
 
     minimiser.solution.push(TtoZ[Calibration.Pt[0].length - 1] * Math.sqrt(minimiser.f / (Calibration.Pt[0].length - 1)))
     return minimiser.solution
@@ -26,27 +26,45 @@ function solver(Calibration) {
 
 function solverH(child) {
 
- 
-    var funcao1 = function(params, hd, ps) {
+
+    var funcao1 = function (params, hd, ps) {
         return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
     };
 
-    var funcao2 = function(params, hd, ps) {
+    var funcao2 = function (params, hd, ps) {
         return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
     };
 
-    var funcao3 = function(params, pt, ps) {
+    var funcao3 = function (params, pt, hd, ps) {
+        var v = [
+            Math.cos(normalizeAngle(90 - hd) * Math.PI / 180),
+            Math.sin(normalizeAngle(90 - hd) * Math.PI / 180),
+            0
+        ];
+        const P0=[ps[0],ps[1],0]
+        const Q=[params[0],params[1],0]
+
+        const PQ = subtract(Q, P0);
+        const t = dot(PQ, v) / dot(v, v);
+
+        const proj = add(P0, scale(v, t));
+
+       // params = [proj[0],proj[1]];
         return Math.sqrt((params[0] - ps[0]) * (params[0] - ps[0]) + (params[1] - ps[1]) * (params[1] - ps[1])) * (Math.tan(pt * Math.PI / 180))
     };
 
-    var objective = function(params) {
+    var objective = function (params) {
         var total = 0.0;
         for (var i = 0; i < child.length / 2; ++i) {
             var resultThisDatum1 = funcao1([params[0], params[1]], child[2 * i].sheading, child[2 * i].cPosition);
             var resultThisDatum2 = funcao2([params[2], params[3]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-            var resultThisDatum3 = funcao3([params[2], params[3]], child[2 * i + 1].spitch, child[2 * i + 1].cPosition) - funcao3([params[0], params[1]], child[2 * i].spitch, child[2 * i].cPosition)
+            var resultThisDatum3 = funcao3([params[2], params[3]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
+            - funcao3([params[0], params[1]], child[2 * i].spitch, child[2 * i].sheading, child[2 * i].cPosition)
             resultThisDatum3 = Math.pow(params[4] - Math.abs(resultThisDatum3), 2);
+
+            
             var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+
             total += delta
         }
         return total;
@@ -58,49 +76,166 @@ function solverH(child) {
 
     var varianceD = 0
     var varianceH = 0
+    var varianceR = 0
     for (var i = 0; i < child.length / 2; ++i) {
-        var objective2 = function(params) {
+        var objective2 = function (params) {
             var total = 0.0;
             var resultThisDatum1 = funcao1([mini[0] + params[0], mini[1] + params[1]], child[2 * i].sheading, child[2 * i].cPosition);
             var resultThisDatum2 = funcao2([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-            var resultThisDatum3 = funcao3([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].spitch, child[2 * i + 1].cPosition) - funcao3([mini[0] + params[0], mini[1] + params[1]], child[2 * i].spitch, child[2 * i].cPosition)
+            var resultThisDatum3 = funcao3([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
+            - funcao3([mini[0] + params[0], mini[1] + params[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
+
             resultThisDatum3 = Math.pow(mini[4] - Math.abs(resultThisDatum3), 2);
             var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
             total += delta
             return total;
         };
-        var initial = [0, 0, 0, 0];
+        var initial = [0, 0];
         var minimiser = numeric.uncmin(objective2, initial)
         var mini2 = minimiser.solution
 
-        var vD = funcao1([mini[0] + mini2[0], mini[1] + mini2[1]], child[2 * i].sheading, child[2 * i].cPosition) + funcao2([mini[2] + mini2[0], mini[3] + mini2[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-        var vH = funcao3([mini[2], mini[3]], child[2 * i + 1].spitch, child[2 * i + 1].cPosition) - funcao3([mini[0], mini[1]], child[2 * i].spitch, child[2 * i].cPosition)
+        var vD = funcao1([mini[0] + mini2[0], mini[1] + mini2[1]], child[2 * i].sheading, child[2 * i].cPosition) 
+        + funcao2([mini[2] + mini2[0], mini[3] + mini2[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+        
+        var vH = funcao3([mini[2], mini[3]], child[2 * i + 1].spitch,child[2 * i+1].sheading, child[2 * i + 1].cPosition) 
+        - funcao3([mini[0], mini[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
+        console.log(Math.abs(vH))
+        
         vH = Math.pow(mini[4] - Math.abs(vH), 2);
+
+        var Vr=Math.pow(mini[0]-child[2 * i].cPosition[0],2)+Math.pow(mini[1]-child[2 * i].cPosition[1],2)+
+        Math.pow(mini[2]-child[2 * i+1].cPosition[0],2)+Math.pow(mini[3]-child[2 * i+1].cPosition[1],2)
+        Vr=(Math.pow(Math.tan((1/37) * Math.PI / 180),2)*Vr/(6))
+   
         varianceD += vD
         varianceH += vH
-
+        varianceR+=Vr
     }
 
-    sigmaD = Math.sqrt(varianceD)
-    sigmaH1 = Math.sqrt(varianceH)
+    var sigmaD = Math.sqrt(varianceD)
+    var sigmaH1 = Math.sqrt(varianceH)
 
-    var TtoZ = new Array(24.7210645292706,3.85430803919157,2.26831429504208,1.78799800829126,1.56588077031271,1.43977787235914,1.35902263974776,1.30306304129452,1.26207205498723,1.23078550392891,1.20613845263661,1.18622896675453,1.16981585969576,1.15605543082363,1.14435451785446,1.13428412521363,1.12552641540871,1.11784096028684,1.11104256561747,1.10498629506257,1.09955710991186,1.09466254780588,1.09022745000777,1.08619009894154,1.08249934511727,1.07911244012803,1.07599338140668,1.07311163318891,1.07044112763907,1.06795947711349);
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
     var resl = mini[4]
     var larg = Math.sqrt(Math.pow((mini[0] - mini[2]), 2) + Math.pow((mini[3] - mini[1]), 2))
     var diag = Math.sqrt(Math.pow(resl, 2) + Math.pow(larg, 2));
-    var sigmaH2 = 0;
+    var sigmaH2 =  Math.sqrt(varianceR);
 
-    var sol = [100 * resl, 100 * TtoZ[child.length / 2 - 2] * (sigmaH1 + sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * TtoZ[child.length / 2 - 2] * (sigmaD) / Math.sqrt(child.length / 2 - 1), 100 * diag]
+    var sol = [100 * resl, 100 * (TtoZ[child.length / 2 - 2] * sigmaH1 + 2*sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * (TtoZ[child.length / 2 - 2] * sigmaD+sigmaH2) / Math.sqrt(child.length / 2 - 1), 100 * diag]
     sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
     return sol
 }
 
-function solverH_old(child) {
-    var funcao = function(params, hd, ps) {
+function solverH_old1(child) {
+
+
+    var funcao1 = function (params, hd, ps) {
         return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
     };
 
-    var objective1 = function(params) {
+    var funcao2 = function (params, hd, ps) {
+        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
+    };
+
+    var funcao3 = function (params, pt, hd, ps) {
+        var v = [
+            Math.cos(normalizeAngle(90 - hd) * Math.PI / 180),
+            Math.sin(normalizeAngle(90 - hd) * Math.PI / 180),
+            0
+        ];
+        const P0=[ps[0],ps[1],0]
+        const Q=[params[0],params[1],0]
+
+        const PQ = subtract(Q, P0);
+        const t = dot(PQ, v) / dot(v, v);
+
+        const proj = add(P0, scale(v, t));
+
+       // params = [proj[0],proj[1]];
+        return Math.sqrt((params[0] - ps[0]) * (params[0] - ps[0]) + (params[1] - ps[1]) * (params[1] - ps[1])) * (Math.tan(pt * Math.PI / 180))
+    };
+
+    var objective = function (params) {
+        var total = 0.0;
+        for (var i = 0; i < child.length / 2; ++i) {
+            var resultThisDatum1 = funcao1([params[0], params[1]], child[2 * i].sheading, child[2 * i].cPosition);
+            var resultThisDatum2 = funcao2([params[2], params[3]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+            var resultThisDatum3 = funcao3([params[2], params[3]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
+            - funcao3([params[0], params[1]], child[2 * i].spitch, child[2 * i].sheading, child[2 * i].cPosition)
+            resultThisDatum3 = Math.pow(params[4] - Math.abs(resultThisDatum3), 2);
+
+            
+            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+
+            total += delta
+        }
+        return total;
+    };
+
+    var initial = [0, 0, 0, 0, 0];
+    var minimiser = numeric.uncmin(objective, initial)
+    var mini = minimiser.solution
+
+    var varianceD = 0
+    var varianceH = 0
+    var varianceR = 0
+    for (var i = 0; i < child.length / 2; ++i) {
+        var objective2 = function (params) {
+            var total = 0.0;
+            var resultThisDatum1 = funcao1([mini[0] + params[0], mini[1] + params[1]], child[2 * i].sheading, child[2 * i].cPosition);
+            var resultThisDatum2 = funcao2([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+            var resultThisDatum3 = funcao3([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
+            - funcao3([mini[0] + params[0], mini[1] + params[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
+
+            resultThisDatum3 = Math.pow(mini[4] - Math.abs(resultThisDatum3), 2);
+            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+            total += delta
+            return total;
+        };
+        var initial = [0, 0];
+        var minimiser = numeric.uncmin(objective2, initial)
+        var mini2 = minimiser.solution
+
+        var vD = funcao1([mini[0] + mini2[0], mini[1] + mini2[1]], child[2 * i].sheading, child[2 * i].cPosition) 
+        + funcao2([mini[2] + mini2[0], mini[3] + mini2[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+        
+        var vH = funcao3([mini[2], mini[3]], child[2 * i + 1].spitch,child[2 * i+1].sheading, child[2 * i + 1].cPosition) 
+        - funcao3([mini[0], mini[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
+       
+        
+        vH = Math.pow(mini[4] - Math.abs(vH), 2);
+
+        
+
+        var Vr=Math.pow(mini[0]-child[2 * i].cPosition[0],2)+Math.pow(mini[1]-child[2 * i].cPosition[1],2)+
+        Math.pow(mini[2]-child[2 * i+1].cPosition[0],2)+Math.pow(mini[3]-child[2 * i+1].cPosition[1],2)
+        Vr=(Math.pow(Math.tan((1/37) * Math.PI / 180),2)*Vr/(6))
+   
+        varianceD += vD
+        varianceH += vH
+        varianceR+=Vr
+    }
+
+    var sigmaD = Math.sqrt(varianceD)
+    var sigmaH1 = Math.sqrt(varianceH)
+
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
+    var resl = mini[4]
+    var larg = Math.sqrt(Math.pow((mini[0] - mini[2]), 2) + Math.pow((mini[3] - mini[1]), 2))
+    var diag = Math.sqrt(Math.pow(resl, 2) + Math.pow(larg, 2));
+    var sigmaH2 =  Math.sqrt(varianceR);
+
+    var sol = [100 * resl, 100 * (TtoZ[child.length / 2 - 2] * sigmaH1 + 2*sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * (TtoZ[child.length / 2 - 2] * sigmaD+sigmaH2) / Math.sqrt(child.length / 2 - 1), 100 * diag]
+    sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
+    return sol
+}
+
+function solverH_old2(child) {
+    var funcao = function (params, hd, ps) {
+        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
+    };
+
+    var objective1 = function (params) {
         var total = 0.0;
         for (var i = 0; i < child.length / 2; ++i) {
             var resultThisDatum = funcao(params, child[2 * i].sheading, child[2 * i].cPosition);
@@ -110,7 +245,7 @@ function solverH_old(child) {
         return total;
     };
 
-    var objective2 = function(params) {
+    var objective2 = function (params) {
         var total = 0.0;
         for (var i = 0; i < child.length / 2; ++i) {
             var resultThisDatum = funcao(params, child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
@@ -146,7 +281,7 @@ function solverH_old(child) {
     }
 
     // console.log(child)
-    var TtoZ = new Array(24.7210645292706,3.85430803919157,2.26831429504208,1.78799800829126,1.56588077031271,1.43977787235914,1.35902263974776,1.30306304129452,1.26207205498723,1.23078550392891,1.20613845263661,1.18622896675453,1.16981585969576,1.15605543082363,1.14435451785446,1.13428412521363,1.12552641540871,1.11784096028684,1.11104256561747,1.10498629506257,1.09955710991186,1.09466254780588,1.09022745000777,1.08619009894154,1.08249934511727,1.07911244012803,1.07599338140668,1.07311163318891,1.07044112763907,1.06795947711349);
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
     var resl = Math.abs(tot / (child.length / 2))
 
     var sigmaH1 = Math.sqrt((2 * tot2 / child.length - Math.pow(2 * tot / child.length, 2)));
@@ -161,7 +296,7 @@ function solverH_old(child) {
 }
 
 function solverC(point, Cal) {
-    var objective = function(params) {
+    var objective = function (params) {
         Ra1 = new Array()
         Ra2 = new Array()
 
@@ -190,14 +325,14 @@ function solverC(point, Cal) {
 
     var initial = [rPanorama.location.latLng.lat(), rPanorama.location.latLng.lng()];
     var minimiser = numeric.uncmin(objective, initial, 1e-12);
-    
+
 
     return minimiser.solution
 }
 
 function solverP_old() {
 
-    var objective = function(params) {
+    var objective = function (params) {
         var total = 0.0;
         var cont = 0
         for (let kk = 0; kk < popupOriginal.document.all.length - 8 - 3 * window._marcadoresPLinhasCount; kk++) {
@@ -310,10 +445,10 @@ function solverP_old() {
 
 function solverP() {
     astorPlace = {
-                lat: rPanorama.position.lat(),
-                lng: rPanorama.position.lng(),
-            };
-    var objective = function(params) {
+        lat: rPanorama.position.lat(),
+        lng: rPanorama.position.lng(),
+    };
+    var objective = function (params) {
         var total = 0.0;
         var cont = 0
         for (let kk = 0; kk < popupOriginal.document.all.length - 8 - 3 * window._marcadoresPLinhasCount; kk++) {
@@ -334,7 +469,7 @@ function solverP() {
                 } else {
                     pv = [0, 0, 0];
                 }
-            
+
                 v = [-v[1], v[0], 0]
 
                 if (norm(v, v) != 0) {
@@ -352,11 +487,11 @@ function solverP() {
                 var resultThisDatum = computeShortestSegment(C1, v1, C2, v2);
                 if (cont + 1 > parseInt(document.querySelector('#input-points input').value) + 1) {
                     total += resultThisDatum.distance;
-                    
+
                 }
                 popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].Point = resultThisDatum.midpoint;
 
-                popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].err = Math.sqrt(resultThisDatum.distance) ;
+                popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].err = Math.sqrt(resultThisDatum.distance);
 
                 rPanorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "P" + String(kk)].camera = C1;
                 pPanorama.__gm.panes.overlayLayer.children[pPanorama.getPano() + "P" + String(kk)].camera = C2;
@@ -378,14 +513,14 @@ function solverP() {
                     var I2 = popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[1]].Point
                     var distance = norm(subtract(I1, I2));
                     var reference = parseFloat(popupOriginal.document.all[kk + 2].value) / 100;
-                    total +=  Math.pow((distance - reference), 2);
+                    total += Math.pow((distance - reference), 2);
                 }
             }
         }
         return total;
     };
 
-    var initial = [0,0,0]
+    var initial = [0, 0, 0]
     var minimiser = numeric.uncmin(objective, initial)
     var sol = minimiser;
     console.log(sol)
@@ -427,21 +562,21 @@ function computeShortestSegment(C1, v1, C2, v2) {
     const n = cross(v1, v2);
     const nNormSq = dot(n, n);
 
-    Int=intersecaoPlanoXY(C1, v1, C2, v2);
+    Int = intersecaoPlanoXY(C1, v1, C2, v2);
 
     if (nNormSq === 0) {
         throw new Error("As retas são paralelas ou coincidentes.");
     }
 
     const D = scale(n, dot(w, n) / nNormSq);
-    var objective = function(params) {
-        var resultThisDatum1 = subtract([params[0],params[1],0], Int);
-        var resultThisDatum2 = norm(subtract([params[0],params[1],0], [C1[0],C1[1],0]))*v1[2]/
-        Math.sqrt(v1[0]*v1[0]+v1[1]*v1[1]);
-        var resultThisDatum3 = norm(subtract([params[0],params[1],0], [C2[0],C2[1],0]))*v2[2]/
-        Math.sqrt(v2[0]*v2[0]+v2[1]*v2[1]);
+    var objective = function (params) {
+        var resultThisDatum1 = subtract([params[0], params[1], 0], Int);
+        var resultThisDatum2 = norm(subtract([params[0], params[1], 0], [C1[0], C1[1], 0])) * v1[2] /
+            Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1]);
+        var resultThisDatum3 = norm(subtract([params[0], params[1], 0], [C2[0], C2[1], 0])) * v2[2] /
+            Math.sqrt(v2[0] * v2[0] + v2[1] * v2[1]);
         var delta = dot(resultThisDatum1, resultThisDatum1)
-        +Math.pow(resultThisDatum2-resultThisDatum3-C2[2],2);
+            + Math.pow(resultThisDatum2 - resultThisDatum3 - C2[2], 2);
         return delta;
     };
 
@@ -451,8 +586,8 @@ function computeShortestSegment(C1, v1, C2, v2) {
 
     const midpoint = minimiser.solution;
 
-    midpoint[2] = norm(subtract([midpoint[0],midpoint[1],0], [C1[0],C1[1],0]))*v1[2]/
-        Math.sqrt(v1[0]*v1[0]+v1[1]*v1[1]);
+    midpoint[2] = norm(subtract([midpoint[0], midpoint[1], 0], [C1[0], C1[1], 0])) * v1[2] /
+        Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1]);
     const distance = minimiser.f;
     return {
         distance,
@@ -471,7 +606,7 @@ function computeShortestSegment_old(C1, v1, C2, v2) {
 
     const D = scale(n, dot(w, n) / nNormSq);
 
-    var objective = function(params) {
+    var objective = function (params) {
         var resultThisDatum1 = cross(subtract(params, C1), v1);
         var resultThisDatum2 = cross(subtract(add(params, D), C2), v2);
         var delta = dot(resultThisDatum1, resultThisDatum1) + dot(resultThisDatum2, resultThisDatum2);
@@ -522,34 +657,34 @@ function project(a, b) {
 }
 
 function intersecaoPlanoXY(C1, v1, C2, v2) {
-  // Garante que os vetores sejam 3D
-  const to3D = v => [v[0], v[1], v[2] ?? 0];
+    // Garante que os vetores sejam 3D
+    const to3D = v => [v[0], v[1], v[2] ?? 0];
 
-  const A = to3D(C1);
-  const B = to3D(v1);
-  const C = to3D(C2);
-  const D = to3D(v2);
+    const A = to3D(C1);
+    const B = to3D(v1);
+    const C = to3D(C2);
+    const D = to3D(v2);
 
-  // Ignora componente Z
-  const Ax = A[0], Ay = A[1];
-  const Bx = B[0], By = B[1];
-  const Cx = C[0], Cy = C[1];
-  const Dx = D[0], Dy = D[1];
+    // Ignora componente Z
+    const Ax = A[0], Ay = A[1];
+    const Bx = B[0], By = B[1];
+    const Cx = C[0], Cy = C[1];
+    const Dx = D[0], Dy = D[1];
 
-  // Determinante (produto vetorial escalar 2D)
-  const det = Bx * Dy - By * Dx;
-  if (Math.abs(det) < 1e-12) {
-    // Retas paralelas ou coincidentes
-    return null;
-  }
+    // Determinante (produto vetorial escalar 2D)
+    const det = Bx * Dy - By * Dx;
+    if (Math.abs(det) < 1e-12) {
+        // Retas paralelas ou coincidentes
+        return null;
+    }
 
-  // Cálculo do parâmetro t (para a reta 1)
-  const t = ((Cx - Ax) * Dy - (Cy - Ay) * Dx) / det;
+    // Cálculo do parâmetro t (para a reta 1)
+    const t = ((Cx - Ax) * Dy - (Cy - Ay) * Dx) / det;
 
-  // Ponto de interseção (no plano XY)
-  const Px = Ax + t * Bx;
-  const Py = Ay + t * By;
+    // Ponto de interseção (no plano XY)
+    const Px = Ax + t * Bx;
+    const Py = Ay + t * By;
 
-  // Mantém Z = 0 explicitamente
-  return [Px, Py, 0];
+    // Mantém Z = 0 explicitamente
+    return [Px, Py, 0];
 }
