@@ -18,7 +18,7 @@ adcElemento = function () {
         SVO.markerWidth = 18;
         SVO.markerHeight = 18;
 
-        if (!eid("centroR")) {
+        if (eid("centroR")) {
             astorPlace = {
                 lat: rPanorama.position.lat(),
                 lng: rPanorama.position.lng(),
@@ -27,11 +27,11 @@ adcElemento = function () {
             var divNova = document.createElement("i");
             divNova.id = "centroR"
             divNova.style.position = "absolute"
-            divNova.style.top = (SVO.panHeight - SVO.markerWidth) / 2 + "px"
-            divNova.style.left = (SVO.panWidth - SVO.markerWidth) / 2 + "px"
-            divNova.style.fontSize = SVO.markerWidth + "px"
-            divNova.style.color = "red"
-            divNova.classList.add('fa', 'fa-plus-circle')
+            divNova.style.top = (SVO.panHeight - SVO.markerWidth/4) / 2 + "px"
+            divNova.style.left = (SVO.panWidth - SVO.markerWidth/4) / 2 + "px"
+            divNova.style.fontSize = SVO.markerWidth/4 + "px"
+            divNova.style.color = "black"
+            divNova.classList.add('fa', "fa-circle")
             Panorama.__gm.panes.overlayImage.appendChild(divNova)
         }
         else {
@@ -47,7 +47,7 @@ adcElemento = function () {
             var divNova = document.createElement("i");
             divNova.id = Name[ii]
             divNova.style.position = "absolute"
-            divNova.style.top = (SVO.panHeight - SVO.markerHeight) / 2 + "px"
+            divNova.style.top = (SVO.panHeight - SVO.markerHeight) / 2+ "px"
             divNova.style.left = (SVO.panWidth - SVO.markerWidth) / 2 + "px"
             divNova.style.fontSize = SVO.markerWidth + "px"
             divNova.style.color = "red"
@@ -127,18 +127,18 @@ adcElementoT = function () {
     SVO.markerWidth = 15;
     SVO.markerHeight = 15;
 
-    if (!eid("centroR")) {
+    if (eid("centroR")) {
         var divNova = document.createElement("i");
         divNova.id = "centroR"
         divNova.style.position = "absolute"
-        divNova.style.top = (SVO.panHeight - SVO.markerWidth) / 2 + "px"
-        divNova.style.left = (SVO.panWidth - SVO.markerWidth) / 2 + "px"
-        divNova.style.fontSize = SVO.markerWidth + "px"
-        divNova.style.color = "red"
-        divNova.classList.add('fa', 'fa-plus-circle')
+        divNova.style.top = (SVO.panHeight - SVO.markerWidth/2) / 2 + "px"
+        divNova.style.left = (SVO.panWidth - SVO.markerWidth/2) / 2 + "px"
+        divNova.style.fontSize = SVO.markerWidth/4 + "px"
+        divNova.style.color = "black"
+        divNova.classList.add('fa', 'fa-circle')
 
         rPanorama.__gm.panes.overlayImage.appendChild(divNova)
-        if (!eid("centroP")) {
+        if (eid("centroP")) {
             var divNova = document.createElement("i");
             divNova.id = "centroP"
             divNova.style.position = "absolute"
@@ -438,16 +438,11 @@ adcElementoC = function () {
 
 
 dragElement = function (elmnt) {
-    var pos1 = 0
-        , pos2 = 0
-        , pos3 = 0
-        , pos4 = 0;
-    if (document.getElementById(elmnt.id)) {
-        // if present, the header is where you move the DIV from:
-        document.getElementById(elmnt.id).onmousedown = dragMouseDown;
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
+    if (document.getElementById(elmnt.id)) {
+        document.getElementById(elmnt.id).onmousedown = dragMouseDown;
     } else {
-        // otherwise, move the DIV from anywhere inside the DIV:
         popupOriginal.document.getElementById(elmnt.id).onmousedown = dragMouseDown;
         elmnt.onmousedown = dragMouseDown;
     }
@@ -455,78 +450,117 @@ dragElement = function (elmnt) {
     function dragMouseDown(e) {
         e = e || window.event;
         e.preventDefault();
-        // get the mouse cursor position at startup:
         pos3 = e.clientX;
         pos4 = e.clientY;
         document.onmouseup = closeDragElement;
-        // call a function whenever the cursor moves:
         document.onmousemove = elementDrag;
         if (popupOriginal) {
             popupOriginal.document.onmouseup = closeDragElement;
             popupOriginal.document.onmousemove = elementDrag;
         }
-
     }
 
     function elementDrag(e) {
-        SVO.panWidth = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
+        SVO.panWidth  = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
         SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
 
         e = e || window.event;
         e.preventDefault();
-        // calculate the new cursor position:
+
         pos1 = pos3 - e.clientX;
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        // set the element's new position:
-        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+
+        elmnt.style.top  = (elmnt.offsetTop  - pos2) + "px";
         elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-        var l_pov
 
-        if (SVO.panWidth > e.clientX) {
-            l_pov = rPanorama.getPov()
-        } else {
-            l_pov = pPanorama.getPov()
-        }
-
+        var l_pov = (SVO.panWidth > e.clientX) ? rPanorama.getPov() : pPanorama.getPov();
         var l_zoom = l_pov.zoom;
 
-        // scale according to street view zoom level
-        var l_adjustedZoom = 45 / Math.pow(1.5 + 0.5 * (1 / (1 + Math.exp((-l_zoom + 1) * 3))), 0.85 * (l_zoom - 1));
-        //var l_adjustedZoom = 45/Math.pow(2 , (0.86*l_zoom-0.81));
+        var l_adjustedZoom = 45 / Math.pow(
+            1.5 + 0.5 * (1 / (1 + Math.exp((-l_zoom + 1) * 3))),
+            0.85 * (l_zoom - 1)
+        );
+        var l_fovAngle = 1 / Math.tan(l_adjustedZoom * Math.PI / 180);
 
-        //var l_adjustedZoom= -0.2468*Math.pow(l_zoom,5)+2.4709*Math.pow(l_zoom,4)
-        //-7.9271*Math.pow(l_zoom,3)+9.8120*Math.pow(l_zoom,2)-21.1090*l_zoom+62
-        var l_fovAngle = 1 / (Math.tan((l_adjustedZoom) * Math.PI / 180));
+        var l_fovAngle = l_zoom === 0 ? 0.475 : Math.pow(2, l_zoom - 1);
+       
+        var l_midX = SVO.panWidth  / 2;
+        var l_midY = SVO.panHeight / 2;
 
-        var l_midX = (SVO.panWidth) / 2;
-        var l_midY = (SVO.panHeight) / 2;
+        // Posição atual do marcador na tela (o que o usuário arrastou)
+        var targetX = elmnt.offsetLeft - pos1;
+        var targetY = elmnt.offsetTop  - pos2;
 
-        var l_diffHeading = 2 * (elmnt.offsetLeft - pos1 - l_midX + SVO.markerWidth / 2) / (SVO.panWidth);
-        var l_diffPitch = 2 * (elmnt.offsetTop - pos2 - l_midY + SVO.markerHeight / 2) / (SVO.panWidth);
+        // Função de custo: m_updateMarker produz (x,y) a partir de (sheading, spitch)
+        // queremos que produza exatamente (targetX, targetY)
+        function cost(v) {
+            var sheading = v[0];
+            var spitch   = v[1];
 
-        elmnt.sheading = l_pov.heading + Math.atan(l_diffHeading / l_fovAngle) * 180 / Math.PI;
-        elmnt.spitch = l_pov.pitch - Math.atan(l_diffPitch / l_fovAngle) * 180 / Math.PI;
+            var θ_P = sheading * Math.PI / 180;
+            var γ_P = spitch   * Math.PI / 180;
+            var θ_0 = l_pov.heading * Math.PI / 180;
+            var γ_0 = l_pov.pitch   * Math.PI / 180;
 
-        if (rPanorama.__gm.panes.overlayLayer.children.length > 2 && !popupOriginal && Math.abs(rPanorama.__gm.panes.overlayLayer.children.length % 2) == 0) {
+            var dθ = θ_P - θ_0;
+
+            var cos_γ0 = Math.cos(γ_0), sin_γ0 = Math.sin(γ_0);
+            var cos_γP = Math.cos(γ_P), sin_γP = Math.sin(γ_P);
+            var cos_dθ = Math.cos(dθ),  sin_dθ = Math.sin(dθ);
+
+            var Sx = cos_γP * sin_dθ;
+            var Sy = cos_γ0 * cos_γP * cos_dθ + sin_γ0 * sin_γP;
+            var Sz = cos_γ0 * sin_γP - sin_γ0 * cos_γP * cos_dθ;
+
+            if (Sy <= 0) return 1e10;
+
+            var proj_x = Sx / Sy;
+            var proj_y = Sz / Sy;
+
+            // Idêntico ao m_updateMarker
+            var x = l_midX + l_fovAngle * proj_x * l_midX - SVO.markerWidth  / 2;
+            var y = l_midY - l_fovAngle * proj_y * l_midX - SVO.markerHeight / 2;
+
+            var dx = targetX - x;
+            var dy = targetY - y;
+            return dx*dx + dy*dy;
+        }
+
+        // Chute inicial: ângulos atuais do marcador
+        var h_init = elmnt.sheading || l_pov.heading;
+        var p_init = elmnt.spitch   || l_pov.pitch;
+
+        var result = numeric.uncmin(cost, [h_init, p_init]);
+
+        elmnt.sheading = result.solution[0];
+        elmnt.spitch   = result.solution[1];
+
+        if (rPanorama.__gm.panes.overlayLayer.children.length > 2 && !popupOriginal &&
+            Math.abs(rPanorama.__gm.panes.overlayLayer.children.length % 2) == 0) {
+
             slt = solverH(rPanorama.__gm.panes.overlayLayer.children);
             for (ii = 0; ii < rPanorama.__gm.panes.overlayLayer.children.length / 2; ii++) {
                 rPanorama.__gm.panes.overlayLayer.children[2 * ii].innerText = '0 [cm] ';
-
-            rPanorama.__gm.panes.overlayLayer.children[2 * ii + 1].innerText = '\n Altura: ' + String(parseFloat(slt[0]).toFixed(1)) + ' (σ=' + String(parseFloat(slt[1]).toFixed(1)) + ')' + '\n Afastamento: ' + String(parseFloat(slt[2]).toFixed(1)) + ' (σ=' + String(parseFloat(slt[3]).toFixed(1)) + ')' + ' \n Distância: ' + String(parseFloat(slt[4]).toFixed(1)) + ' (σ=' + String(parseFloat(slt[5]).toFixed(1)) + ')';
+                rPanorama.__gm.panes.overlayLayer.children[2 * ii + 1].innerText =
+                    '\n Altura: '      + parseFloat(slt[0]).toFixed(1) +
+                    ' (σ='            + parseFloat(slt[1]).toFixed(1) + ')' +
+                    '\n Afastamento: ' + parseFloat(slt[2]).toFixed(1) +
+                    ' (σ='            + parseFloat(slt[3]).toFixed(1) + ')' +
+                    ' \n Distância: '  + parseFloat(slt[4]).toFixed(1) +
+                    ' (σ='            + parseFloat(slt[5]).toFixed(1) + ')';
             }
-            
-        } 
+        }
     }
+
     function closeDragElement() {
-        // stop moving when mouse button is released:
         document.onmouseup = null;
         document.onmousemove = null;
         if (popupOriginal) {
             popupOriginal.document.onmouseup = null;
             popupOriginal.document.onmousemove = null;
-            solverP()
+            solverP();
         }
     }
 }
@@ -534,46 +568,52 @@ dragElement = function (elmnt) {
 // create the 'marker' (a div containing an image which can be clicked)
 
 m_updateMarker = function (elmnt, l_pov) {
-    SVO.panWidth = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
+    SVO.panWidth  = Object.values(rMap.__gm.pixelBounds)[2] - Object.values(rMap.__gm.pixelBounds)[0];
     SVO.panHeight = Object.values(rMap.__gm.pixelBounds)[3] - Object.values(rMap.__gm.pixelBounds)[1];
 
-    if (l_pov) {
-        var l_zoom = l_pov.zoom;
+    if (!l_pov) return;
 
-        // scale according to street view zoom level
-        var l_adjustedZoom = 45 / Math.pow(1.5 + 0.5 * (1 / (1 + Math.exp((-l_zoom + 1) * 3))), 0.85 * (l_zoom - 1));
+    var l_zoom = l_pov.zoom;
 
-        var l_fovAngle = 1 / (Math.tan((l_adjustedZoom) * Math.PI / 180));
+    var l_fovAngle = l_zoom === 0 ? 0.475 : Math.pow(2, l_zoom - 1);
 
-        var l_midX = SVO.panWidth / 2;
-        var l_midY = SVO.panHeight / 2;
+    var l_midX = SVO.panWidth  / 2;
+    var l_midY = SVO.panHeight / 2;
 
-        var l_diffHeading = (normalizeAngle(l_pov.heading - elmnt.sheading)) * Math.PI / 180;
-        var l_diffPitch = (normalizeAngle(l_pov.pitch - elmnt.spitch)) * Math.PI / 180
+    var θ_P = elmnt.sheading * Math.PI / 180;
+    var γ_P = elmnt.spitch   * Math.PI / 180;
+    var θ_0 = l_pov.heading  * Math.PI / 180;
+    var γ_0 = l_pov.pitch    * Math.PI / 180;
 
-        // 5) Projeção cilíndrica (perspective)
-        var cosdh = Math.cos(l_diffHeading);
-        var cosdp = Math.cos(l_diffPitch);
-       // var eps = 1e-6; // evita explosão perto de |dh| ~ 90°
-    //if (Math.abs(cosdp) < eps) cosdp = (l_pov.pitch > 0 ? eps : -eps);
+    var dθ = θ_P - θ_0;
 
-        l_diffHeading = (l_fovAngle) * (-Math.tan(l_diffHeading)/cosdp);
+    var cos_γ0 = Math.cos(γ_0), sin_γ0 = Math.sin(γ_0);
+    var cos_γP = Math.cos(γ_P), sin_γP = Math.sin(γ_P);
+    var cos_dθ = Math.cos(dθ),  sin_dθ = Math.sin(dθ);
 
-        l_diffPitch = (l_fovAngle) * (Math.tan(l_diffPitch)/cosdh);
+    // Componentes após rotação inversa da câmera
+    var Sx = cos_γP * sin_dθ;
+    var Sy = cos_γ0 * cos_γP * cos_dθ + sin_γ0 * sin_γP;  // profundidade
+    var Sz = cos_γ0 * sin_γP - sin_γ0 * cos_γP * cos_dθ;
 
-        var x = l_midX + (l_diffHeading) * (SVO.panWidth) / 2 - SVO.markerWidth / 2;
-        var y = l_midY + (l_diffPitch) * (SVO.panWidth) / 2 - SVO.markerHeight / 2;
-
-        var l_markerDiv = elmnt;
-
-        //l_markerDiv.style.display = "block";
-        l_markerDiv.style.left = x + "px";
-        l_markerDiv.style.top = y + "px";
-        // hide marker when its beyond the maximum distance
-
-        l_markerDiv.style.display = (45 / Math.pow(2, (l_zoom - 1))) > Math.abs(normalizeAngle(l_pov.heading - elmnt.sheading)) ? "block" : "none";
+    // Ponto atrás da câmera
+    if (Sy <= 0) {
+        elmnt.style.display = "none";
+        return;
     }
-}
+
+    // Projeção perspectiva completa
+    var proj_x = Sx / Sy;
+    var proj_y = Sz / Sy;
+
+    var x = l_midX + l_fovAngle * proj_x * l_midX - SVO.markerWidth  / 2;
+    var y = l_midY - l_fovAngle * proj_y * l_midX - SVO.markerHeight / 2;
+
+    elmnt.style.left    = x + "px";
+    elmnt.style.top     = y + "px";
+    elmnt.style.display = "block";
+};
+
 
 // utils
 function eid(id) {

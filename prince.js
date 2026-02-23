@@ -178,7 +178,7 @@ async function initMap() {
 
     pPanorama = pMap.getStreetView()
     pPanorama.setOptions({
-        linksControl: false,
+        linksControl:true,
         panControl: true,
         clickToGo: false,
         disableDefaultUI: true,
@@ -210,12 +210,14 @@ async function initMap() {
     pPanorama.setVisible(false)
 
     rPanorama.addListener('visible_changed', function () {
-    if (!rPanorama.getVisible()) {
+    setTimeout(() => {
+        if (!rPanorama.getVisible()) {
         setMapOnAll(rMap, CheckPoints);
         
     } else {
        setMapOnAll(null, CheckPoints); 
     }
+        }, 0);
     });
 
     pPanorama.addListener('visible_changed', function() {
@@ -230,24 +232,18 @@ async function initMap() {
 
 
     rPanorama.addListener("position_changed", function () {   
-        
-        const self = this;    
+      const self = this;  
     setTimeout(() => {
         if (this.location) {
-            if (markerPanoID.length == 0) {
-                markerPanoID = this.getPano()
-                sv.getPanorama({
-                    pano: this.getPano()
-                }, rPanoSetting);
-            }
-            else if (markerPanoID != this.getPano()) {
+          
+          if (markerPanoID != this.getPano()) {
                 markerPanoID = this.getPano()
                sv.getPanorama({
                     pano: this.getPano()
                 }, rPanoSetting);
             }
         }
-        }, 50); 
+        },50); 
     });
 
 
