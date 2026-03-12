@@ -1,29 +1,3 @@
-function solver(Calibration) {
-
-    var funcao = function (params, Pr, Pp, Cr, Cp, Nv) {
-
-        return (((params[0] * (Pr[1] - Cr[1]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[1]) - (params[0] * (Pp[1] - Cp[1]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[1])) * ((params[0] * (Pr[1] - Cr[1]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[1]) - (params[0] * (Pp[1] - Cp[1]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[1])) + ((params[0] * (Pr[0] - Cr[0]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[0]) - (params[0] * (Pp[0] - Cp[0]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[0])) * ((params[0] * (Pr[0] - Cr[0]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[0]) - (params[0] * (Pp[0] - Cp[0]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[0])));
-    };
-
-    var objective = function (params) {
-        var total = 0.0;
-        for (var i = 0; i < Calibration.Pt[0].length; ++i) {
-            var resultThisDatum = funcao(params, Calibration.Pt[0][i], Calibration.Pt[1][i], Calibration.Cm[0][i], Calibration.Cm[1][i], Calibration.Nv[i]);
-            var delta = resultThisDatum;
-            total += delta;
-        }
-        return total;
-    };
-
-    var initial = [3, 0];
-    var minimiser = numeric.uncmin(objective, initial);
-
-    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
-
-    minimiser.solution.push(TtoZ[Calibration.Pt[0].length - 1] * Math.sqrt(minimiser.f / (Calibration.Pt[0].length - 1)))
-    return minimiser.solution
-}
-
 function solverH(child) {
 
 
@@ -49,7 +23,7 @@ function solverH(child) {
 
         const proj = add(P0, scale(v, t));
 
-       // params = [proj[0],proj[1]];
+        params = [proj[0],proj[1]];
         return Math.sqrt((params[0] - ps[0]) * (params[0] - ps[0]) + (params[1] - ps[1]) * (params[1] - ps[1])) * (Math.tan(pt * Math.PI / 180))
     };
 
@@ -60,10 +34,9 @@ function solverH(child) {
             var resultThisDatum2 = funcao2([params[2], params[3]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
             var resultThisDatum3 = funcao3([params[2], params[3]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
             - funcao3([params[0], params[1]], child[2 * i].spitch, child[2 * i].sheading, child[2 * i].cPosition)
-            resultThisDatum3 = Math.pow(params[4] - Math.abs(resultThisDatum3), 2);
+            resultThisDatum3 = Math.pow(params[4] - resultThisDatum3, 2);
 
-            
-            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+            var delta = resultThisDatum1 + resultThisDatum2 + 4*(resultThisDatum3)
 
             total += delta
         }
@@ -85,8 +58,8 @@ function solverH(child) {
             var resultThisDatum3 = funcao3([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
             - funcao3([mini[0] + params[0], mini[1] + params[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
 
-            resultThisDatum3 = Math.pow(mini[4] - Math.abs(resultThisDatum3), 2);
-            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+            resultThisDatum3 = Math.pow(mini[4] - resultThisDatum3, 2);
+            var delta = resultThisDatum1 + resultThisDatum2 + 4 * resultThisDatum3;
             total += delta
             return total;
         };
@@ -99,9 +72,8 @@ function solverH(child) {
         
         var vH = funcao3([mini[2], mini[3]], child[2 * i + 1].spitch,child[2 * i+1].sheading, child[2 * i + 1].cPosition) 
         - funcao3([mini[0], mini[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
-        console.log(Math.abs(vH))
         
-        vH = Math.pow(mini[4] - Math.abs(vH), 2);
+        vH = Math.pow(Math.abs(mini[4]) - Math.abs(vH), 2);
 
         var Vr=Math.pow(mini[0]-child[2 * i].cPosition[0],2)+Math.pow(mini[1]-child[2 * i].cPosition[1],2)+
         Math.pow(mini[2]-child[2 * i+1].cPosition[0],2)+Math.pow(mini[3]-child[2 * i+1].cPosition[1],2)
@@ -122,175 +94,6 @@ function solverH(child) {
     var sigmaH2 =  Math.sqrt(varianceR);
 
     var sol = [100 * resl, 100 * (TtoZ[child.length / 2 - 2] * sigmaH1 + 2*sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * (TtoZ[child.length / 2 - 2] * sigmaD+sigmaH2) / Math.sqrt(child.length / 2 - 1), 100 * diag]
-    sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
-    return sol
-}
-
-function solverH_old1(child) {
-
-
-    var funcao1 = function (params, hd, ps) {
-        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
-    };
-
-    var funcao2 = function (params, hd, ps) {
-        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
-    };
-
-    var funcao3 = function (params, pt, hd, ps) {
-        var v = [
-            Math.cos(normalizeAngle(90 - hd) * Math.PI / 180),
-            Math.sin(normalizeAngle(90 - hd) * Math.PI / 180),
-            0
-        ];
-        const P0=[ps[0],ps[1],0]
-        const Q=[params[0],params[1],0]
-
-        const PQ = subtract(Q, P0);
-        const t = dot(PQ, v) / dot(v, v);
-
-        const proj = add(P0, scale(v, t));
-
-       // params = [proj[0],proj[1]];
-        return Math.sqrt((params[0] - ps[0]) * (params[0] - ps[0]) + (params[1] - ps[1]) * (params[1] - ps[1])) * (Math.tan(pt * Math.PI / 180))
-    };
-
-    var objective = function (params) {
-        var total = 0.0;
-        for (var i = 0; i < child.length / 2; ++i) {
-            var resultThisDatum1 = funcao1([params[0], params[1]], child[2 * i].sheading, child[2 * i].cPosition);
-            var resultThisDatum2 = funcao2([params[2], params[3]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-            var resultThisDatum3 = funcao3([params[2], params[3]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
-            - funcao3([params[0], params[1]], child[2 * i].spitch, child[2 * i].sheading, child[2 * i].cPosition)
-            resultThisDatum3 = Math.pow(params[4] - Math.abs(resultThisDatum3), 2);
-
-            
-            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
-
-            total += delta
-        }
-        return total;
-    };
-
-    var initial = [0, 0, 0, 0, 0];
-    var minimiser = numeric.uncmin(objective, initial)
-    var mini = minimiser.solution
-
-    var varianceD = 0
-    var varianceH = 0
-    var varianceR = 0
-    for (var i = 0; i < child.length / 2; ++i) {
-        var objective2 = function (params) {
-            var total = 0.0;
-            var resultThisDatum1 = funcao1([mini[0] + params[0], mini[1] + params[1]], child[2 * i].sheading, child[2 * i].cPosition);
-            var resultThisDatum2 = funcao2([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-            var resultThisDatum3 = funcao3([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
-            - funcao3([mini[0] + params[0], mini[1] + params[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
-
-            resultThisDatum3 = Math.pow(mini[4] - Math.abs(resultThisDatum3), 2);
-            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
-            total += delta
-            return total;
-        };
-        var initial = [0, 0];
-        var minimiser = numeric.uncmin(objective2, initial)
-        var mini2 = minimiser.solution
-
-        var vD = funcao1([mini[0] + mini2[0], mini[1] + mini2[1]], child[2 * i].sheading, child[2 * i].cPosition) 
-        + funcao2([mini[2] + mini2[0], mini[3] + mini2[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-        
-        var vH = funcao3([mini[2], mini[3]], child[2 * i + 1].spitch,child[2 * i+1].sheading, child[2 * i + 1].cPosition) 
-        - funcao3([mini[0], mini[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
-       
-        
-        vH = Math.pow(mini[4] - Math.abs(vH), 2);
-
-        
-
-        var Vr=Math.pow(mini[0]-child[2 * i].cPosition[0],2)+Math.pow(mini[1]-child[2 * i].cPosition[1],2)+
-        Math.pow(mini[2]-child[2 * i+1].cPosition[0],2)+Math.pow(mini[3]-child[2 * i+1].cPosition[1],2)
-        Vr=(Math.pow(Math.tan((1/37) * Math.PI / 180),2)*Vr/(6))
-   
-        varianceD += vD
-        varianceH += vH
-        varianceR+=Vr
-    }
-
-    var sigmaD = Math.sqrt(varianceD)
-    var sigmaH1 = Math.sqrt(varianceH)
-
-    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
-    var resl = mini[4]
-    var larg = Math.sqrt(Math.pow((mini[0] - mini[2]), 2) + Math.pow((mini[3] - mini[1]), 2))
-    var diag = Math.sqrt(Math.pow(resl, 2) + Math.pow(larg, 2));
-    var sigmaH2 =  Math.sqrt(varianceR);
-
-    var sol = [100 * resl, 100 * (TtoZ[child.length / 2 - 2] * sigmaH1 + 2*sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * (TtoZ[child.length / 2 - 2] * sigmaD+sigmaH2) / Math.sqrt(child.length / 2 - 1), 100 * diag]
-    sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
-    return sol
-}
-
-function solverH_old2(child) {
-    var funcao = function (params, hd, ps) {
-        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
-    };
-
-    var objective1 = function (params) {
-        var total = 0.0;
-        for (var i = 0; i < child.length / 2; ++i) {
-            var resultThisDatum = funcao(params, child[2 * i].sheading, child[2 * i].cPosition);
-            var delta = resultThisDatum;
-            total += delta
-        }
-        return total;
-    };
-
-    var objective2 = function (params) {
-        var total = 0.0;
-        for (var i = 0; i < child.length / 2; ++i) {
-            var resultThisDatum = funcao(params, child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
-            var delta = resultThisDatum;
-            total += delta
-        }
-        return total;
-    };
-
-    var initial = [0, 0];
-    var minimiser1 = numeric.uncmin(objective1, initial)
-    var minimiser2 = numeric.uncmin(objective2, initial)
-    var minimiser = minimiser1.solution
-    minimiser.push(minimiser2.solution[0])
-    minimiser.push(minimiser2.solution[1])
-
-    minimiser.push(Math.sqrt(((minimiser1.f) + (minimiser2.f))) / (child.length / 2 - 1))
-    var tot = 0.0;
-    var tot2 = 0.0;
-    var totd = 0.0;
-
-    for (var i = 0; i < child.length / 2; ++i) {
-
-        var resultThisM = Math.sqrt((minimiser[2] - child[2 * i + 1].cPosition[0]) * (minimiser[2] - child[2 * i + 1].cPosition[0]) + (minimiser[3] - child[2 * i + 1].cPosition[1]) * (minimiser[3] - child[2 * i + 1].cPosition[1])) * (Math.tan(child[2 * i + 1].spitch * Math.PI / 180)) - Math.sqrt((minimiser[0] - child[2 * i].cPosition[0]) * (minimiser[0] - child[2 * i].cPosition[0]) + (minimiser[1] - child[2 * i].cPosition[1]) * (minimiser[1] - child[2 * i].cPosition[1])) * (Math.tan(child[2 * i].spitch * Math.PI / 180));
-
-        var resultThisM2 = Math.pow(Math.sqrt((minimiser[2] - child[2 * i + 1].cPosition[0]) * (minimiser[2] - child[2 * i + 1].cPosition[0]) + (minimiser[3] - child[2 * i + 1].cPosition[1]) * (minimiser[3] - child[2 * i + 1].cPosition[1])) * (Math.tan(child[2 * i + 1].spitch * Math.PI / 180)) - Math.sqrt((minimiser[0] - child[2 * i].cPosition[0]) * (minimiser[0] - child[2 * i].cPosition[0]) + (minimiser[1] - child[2 * i].cPosition[1]) * (minimiser[1] - child[2 * i].cPosition[1])) * (Math.tan(child[2 * i].spitch * Math.PI / 180)), 2);
-
-        var resultThisMd = minimiser[4] * (Math.tan(child[2 * i + 1].spitch * Math.PI / 180) - Math.tan(child[2 * i].spitch * Math.PI / 180));
-
-        tot += resultThisM
-        tot2 += resultThisM2
-        totd += resultThisMd
-    }
-
-    // console.log(child)
-    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
-    var resl = Math.abs(tot / (child.length / 2))
-
-    var sigmaH1 = Math.sqrt((2 * tot2 / child.length - Math.pow(2 * tot / child.length, 2)));
-
-    var larg = Math.sqrt(Math.pow((minimiser[0] - minimiser[2]), 2) + Math.pow((minimiser[3] - minimiser[1]), 2))
-    var diag = Math.sqrt(Math.pow(resl, 2) + Math.pow(larg, 2));
-    var sigmaH2 = totd;
-
-    var sol = [100 * resl, 100 * TtoZ[child.length / 2 - 2] * (sigmaH1 + sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * TtoZ[child.length / 2 - 2] * (minimiser[4]) / Math.sqrt(child.length / 2 - 1), 100 * diag]
     sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
     return sol
 }
@@ -328,119 +131,6 @@ function solverC(point, Cal) {
 
 
     return minimiser.solution
-}
-
-function solverP_old() {
-
-    var objective = function (params) {
-        var total = 0.0;
-        var cont = 0
-        for (let kk = 0; kk < popupOriginal.document.all.length - 8 - 3 * window._marcadoresPLinhasCount; kk++) {
-            if (popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)]) {
-                cont = cont + 1
-
-                var child1 = rPanorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "P" + String(kk)];
-                var child2 = pPanorama.__gm.panes.overlayLayer.children[pPanorama.getPano() + "P" + String(kk)];
-
-                var P1 = cartesian(rPanorama.position.lat(), rPanorama.position.lng())
-                var P2 = cartesian(pPanorama.position.lat(), pPanorama.position.lng())
-
-                var v = subtract(P2, P1);
-                var pv = [v[0], v[1], 0]
-
-                if (window._marcadoresPLinhasCount > 0) {
-                    pv = scale(pv, 1 / norm(pv, pv));
-                } else {
-                    pv = [0, 0, 0];
-                }
-
-                v = [-v[1], v[0], 0]
-
-                if (norm(v, v) != 0) {
-                    var nv = scale(v, 1 / norm(v, v));
-                } else {
-                    var nv = [0, 0, 0];
-                }
-
-                P1 = [P1[0] + params[0] * pv[0], P1[1] + params[0] * pv[1], 0];
-                P2 = [P2[0] + nv[0] * params[1], P2[1] + nv[1] * params[1], params[2]];
-
-                var v1 = [Math.cos(child1.spitch * Math.PI / 180) * Math.cos(normalizeAngle(90 - child1.sheading) * Math.PI / 180), Math.cos(child1.spitch * Math.PI / 180) * Math.sin(normalizeAngle(90 - child1.sheading) * Math.PI / 180), Math.sin(child1.spitch * Math.PI / 180)];
-                var v2 = [Math.cos(child2.spitch * Math.PI / 180) * Math.cos(normalizeAngle(90 - child2.sheading) * Math.PI / 180), Math.cos(child2.spitch * Math.PI / 180) * Math.sin(normalizeAngle(90 - child2.sheading) * Math.PI / 180), Math.sin(child2.spitch * Math.PI / 180)];
-
-                var resultThisDatum = computeShortestSegment(P1, v1, P2, v2);
-                if (cont + 1 > parseInt(document.querySelector('#input-points input').value) + 1) {
-                    total += Math.pow(resultThisDatum.distance, 2);
-                }
-                popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].Point = resultThisDatum.midpoint;
-
-                popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].err = resultThisDatum.distance / 2;
-
-                rPanorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "P" + String(kk)].camera = P1;
-                pPanorama.__gm.panes.overlayLayer.children[pPanorama.getPano() + "P" + String(kk)].camera = P2;
-
-                if (cont < parseInt(document.querySelector('#input-points input').value) + 1) {// console.log(kk,resultThisDatum.midpoint,resultThisDatum.distance/2)
-                }
-
-            }
-
-        }
-
-        for (let kk = popupOriginal.document.all.length - 3 * window._marcadoresPLinhasCount; kk < popupOriginal.document.all.length; kk++) {
-
-            var par = popupOriginal.document.all[kk].id.split("&");
-            if (par.length == 2) {
-                if (popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[0]] && popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[1]]) {
-
-                    var I1 = popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[0]].Point
-                    var I2 = popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[1]].Point
-
-                    var distance = norm(subtract(I1, I2));
-                    var reference = parseFloat(popupOriginal.document.all[kk + 2].value) / 100;
-
-                    total += Math.pow(distance - reference, 2);
-
-                }
-            }
-        }
-        return total;
-    };
-
-    var initial = [0, 0, 0]
-    var minimiser = numeric.uncmin(objective, initial)
-    var sol = minimiser;
-
-    dados = [];
-
-    for (kk = 0; kk < popupOriginal.document.all.length - 8 - 3 * window._marcadoresPLinhasCount; kk++) {
-        NameQ = popupOriginal.document.getElementById("image-original").children[kk + 1].IDz;
-        numb = countElementsByIdPrefix(popupOriginal.document, NameQ);
-
-        pano = popupOriginal.document.getElementById("image-original").children[kk + 1].IDz.split("&");
-
-        var loc = popupOriginal.document.getElementById("image-original").children[kk + 1].Point
-        var uu = parseInt(popupOriginal.document.getElementById("image-original").children[kk + 1].style.left) + SVO.markerWidth / 4 - 1
-        var vv = parseInt(popupOriginal.document.getElementById("image-original").children[kk + 1].style.top) + SVO.markerWidth / 4 - 1
-
-        if (rPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)]) {
-            var sh1 = rPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].sheading;
-            var sp1 = rPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].spitch;
-        } else {
-            var sh1 = pPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].sheading;
-            var sp1 = pPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].spitch;
-        }
-
-        if (rPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)]) {
-            var sh2 = rPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].sheading;
-            var sp2 = rPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].spitch;
-        } else {
-            var sh2 = pPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].sheading;
-            var sp2 = pPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].spitch;
-        }
-
-        dados = dados + popupOriginal.document.getElementById("image-original").children[kk + 1].IDz + ";" + loc[0] + ";" + loc[1] + ";" + loc[2] + ";" + uu + ";" + vv + ";" + popupOriginal.document.getElementById("image-original").children[kk + 1].err + ";" + sh1 + ";" + sh2 + ";" + sp1 + ";" + sp2 + "\r\n";
-    }
-    return sol
 }
 
 function solverP() {
@@ -687,4 +377,316 @@ function intersecaoPlanoXY(C1, v1, C2, v2) {
 
     // Mantém Z = 0 explicitamente
     return [Px, Py, 0];
+}
+
+
+
+
+function solver(Calibration) {
+
+    var funcao = function (params, Pr, Pp, Cr, Cp, Nv) {
+
+        return (((params[0] * (Pr[1] - Cr[1]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[1]) - (params[0] * (Pp[1] - Cp[1]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[1])) * ((params[0] * (Pr[1] - Cr[1]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[1]) - (params[0] * (Pp[1] - Cp[1]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[1])) + ((params[0] * (Pr[0] - Cr[0]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[0]) - (params[0] * (Pp[0] - Cp[0]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[0])) * ((params[0] * (Pr[0] - Cr[0]) / (params[1] + params[0] - Nv[0] * (Pr[0] - Cr[0]) - Nv[1] * (Pr[1] - Cr[1])) + Cr[0]) - (params[0] * (Pp[0] - Cp[0]) / (params[1] + params[0] - Nv[0] * (Pp[0] - Cp[0]) - Nv[1] * (Pp[1] - Cp[1])) + Cp[0])));
+    };
+
+    var objective = function (params) {
+        var total = 0.0;
+        for (var i = 0; i < Calibration.Pt[0].length; ++i) {
+            var resultThisDatum = funcao(params, Calibration.Pt[0][i], Calibration.Pt[1][i], Calibration.Cm[0][i], Calibration.Cm[1][i], Calibration.Nv[i]);
+            var delta = resultThisDatum;
+            total += delta;
+        }
+        return total;
+    };
+
+    var initial = [3, 0];
+    var minimiser = numeric.uncmin(objective, initial);
+
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
+
+    minimiser.solution.push(TtoZ[Calibration.Pt[0].length - 1] * Math.sqrt(minimiser.f / (Calibration.Pt[0].length - 1)))
+    return minimiser.solution
+}
+
+function solverH_old1(child) {
+
+
+    var funcao1 = function (params, hd, ps) {
+        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
+    };
+
+    var funcao2 = function (params, hd, ps) {
+        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
+    };
+
+    var funcao3 = function (params, pt, hd, ps) {
+        var v = [
+            Math.cos(normalizeAngle(90 - hd) * Math.PI / 180),
+            Math.sin(normalizeAngle(90 - hd) * Math.PI / 180),
+            0
+        ];
+        const P0=[ps[0],ps[1],0]
+        const Q=[params[0],params[1],0]
+
+        const PQ = subtract(Q, P0);
+        const t = dot(PQ, v) / dot(v, v);
+
+        const proj = add(P0, scale(v, t));
+
+       // params = [proj[0],proj[1]];
+        return Math.sqrt((params[0] - ps[0]) * (params[0] - ps[0]) + (params[1] - ps[1]) * (params[1] - ps[1])) * (Math.tan(pt * Math.PI / 180))
+    };
+
+    var objective = function (params) {
+        var total = 0.0;
+        for (var i = 0; i < child.length / 2; ++i) {
+            var resultThisDatum1 = funcao1([params[0], params[1]], child[2 * i].sheading, child[2 * i].cPosition);
+            var resultThisDatum2 = funcao2([params[2], params[3]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+            var resultThisDatum3 = funcao3([params[2], params[3]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
+            - funcao3([params[0], params[1]], child[2 * i].spitch, child[2 * i].sheading, child[2 * i].cPosition)
+            resultThisDatum3 = Math.pow(params[4] - Math.abs(resultThisDatum3), 2);
+
+            
+            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+
+            total += delta
+        }
+        return total;
+    };
+
+    var initial = [0, 0, 0, 0, 0];
+    var minimiser = numeric.uncmin(objective, initial)
+    var mini = minimiser.solution
+
+    var varianceD = 0
+    var varianceH = 0
+    var varianceR = 0
+    for (var i = 0; i < child.length / 2; ++i) {
+        var objective2 = function (params) {
+            var total = 0.0;
+            var resultThisDatum1 = funcao1([mini[0] + params[0], mini[1] + params[1]], child[2 * i].sheading, child[2 * i].cPosition);
+            var resultThisDatum2 = funcao2([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+            var resultThisDatum3 = funcao3([mini[2] + params[0], mini[3] + params[1]], child[2 * i + 1].spitch,child[2 * i + 1].sheading, child[2 * i + 1].cPosition) 
+            - funcao3([mini[0] + params[0], mini[1] + params[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
+
+            resultThisDatum3 = Math.pow(mini[4] - Math.abs(resultThisDatum3), 2);
+            var delta = resultThisDatum1 + resultThisDatum2 + resultThisDatum3
+            total += delta
+            return total;
+        };
+        var initial = [0, 0];
+        var minimiser = numeric.uncmin(objective2, initial)
+        var mini2 = minimiser.solution
+
+        var vD = funcao1([mini[0] + mini2[0], mini[1] + mini2[1]], child[2 * i].sheading, child[2 * i].cPosition) 
+        + funcao2([mini[2] + mini2[0], mini[3] + mini2[1]], child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+        
+        var vH = funcao3([mini[2], mini[3]], child[2 * i + 1].spitch,child[2 * i+1].sheading, child[2 * i + 1].cPosition) 
+        - funcao3([mini[0], mini[1]], child[2 * i].spitch,child[2 * i].sheading, child[2 * i].cPosition)
+       
+        
+        vH = Math.pow(mini[4] - Math.abs(vH), 2);
+
+        
+
+        var Vr=Math.pow(mini[0]-child[2 * i].cPosition[0],2)+Math.pow(mini[1]-child[2 * i].cPosition[1],2)+
+        Math.pow(mini[2]-child[2 * i+1].cPosition[0],2)+Math.pow(mini[3]-child[2 * i+1].cPosition[1],2)
+        Vr=(Math.pow(Math.tan((1/37) * Math.PI / 180),2)*Vr/(6))
+   
+        varianceD += vD
+        varianceH += vH
+        varianceR+=Vr
+    }
+
+    var sigmaD = Math.sqrt(varianceD)
+    var sigmaH1 = Math.sqrt(varianceH)
+
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
+    var resl = mini[4]
+    var larg = Math.sqrt(Math.pow((mini[0] - mini[2]), 2) + Math.pow((mini[3] - mini[1]), 2))
+    var diag = Math.sqrt(Math.pow(resl, 2) + Math.pow(larg, 2));
+    var sigmaH2 =  Math.sqrt(varianceR);
+
+    var sol = [100 * resl, 100 * (TtoZ[child.length / 2 - 2] * sigmaH1 + 2*sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * (TtoZ[child.length / 2 - 2] * sigmaD+sigmaH2) / Math.sqrt(child.length / 2 - 1), 100 * diag]
+    sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
+    return sol
+}
+
+function solverH_old2(child) {
+    var funcao = function (params, hd, ps) {
+        return (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) * (Math.abs(Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * (params[0] - ps[0]) + ps[1] - params[1])) / (Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) * Math.tan(normalizeAngle(90 - hd) * Math.PI / 180) + 1)
+    };
+
+    var objective1 = function (params) {
+        var total = 0.0;
+        for (var i = 0; i < child.length / 2; ++i) {
+            var resultThisDatum = funcao(params, child[2 * i].sheading, child[2 * i].cPosition);
+            var delta = resultThisDatum;
+            total += delta
+        }
+        return total;
+    };
+
+    var objective2 = function (params) {
+        var total = 0.0;
+        for (var i = 0; i < child.length / 2; ++i) {
+            var resultThisDatum = funcao(params, child[2 * i + 1].sheading, child[2 * i + 1].cPosition);
+            var delta = resultThisDatum;
+            total += delta
+        }
+        return total;
+    };
+
+    var initial = [0, 0];
+    var minimiser1 = numeric.uncmin(objective1, initial)
+    var minimiser2 = numeric.uncmin(objective2, initial)
+    var minimiser = minimiser1.solution
+    minimiser.push(minimiser2.solution[0])
+    minimiser.push(minimiser2.solution[1])
+
+    minimiser.push(Math.sqrt(((minimiser1.f) + (minimiser2.f))) / (child.length / 2 - 1))
+    var tot = 0.0;
+    var tot2 = 0.0;
+    var totd = 0.0;
+
+    for (var i = 0; i < child.length / 2; ++i) {
+
+        var resultThisM = Math.sqrt((minimiser[2] - child[2 * i + 1].cPosition[0]) * (minimiser[2] - child[2 * i + 1].cPosition[0]) + (minimiser[3] - child[2 * i + 1].cPosition[1]) * (minimiser[3] - child[2 * i + 1].cPosition[1])) * (Math.tan(child[2 * i + 1].spitch * Math.PI / 180)) - Math.sqrt((minimiser[0] - child[2 * i].cPosition[0]) * (minimiser[0] - child[2 * i].cPosition[0]) + (minimiser[1] - child[2 * i].cPosition[1]) * (minimiser[1] - child[2 * i].cPosition[1])) * (Math.tan(child[2 * i].spitch * Math.PI / 180));
+
+        var resultThisM2 = Math.pow(Math.sqrt((minimiser[2] - child[2 * i + 1].cPosition[0]) * (minimiser[2] - child[2 * i + 1].cPosition[0]) + (minimiser[3] - child[2 * i + 1].cPosition[1]) * (minimiser[3] - child[2 * i + 1].cPosition[1])) * (Math.tan(child[2 * i + 1].spitch * Math.PI / 180)) - Math.sqrt((minimiser[0] - child[2 * i].cPosition[0]) * (minimiser[0] - child[2 * i].cPosition[0]) + (minimiser[1] - child[2 * i].cPosition[1]) * (minimiser[1] - child[2 * i].cPosition[1])) * (Math.tan(child[2 * i].spitch * Math.PI / 180)), 2);
+
+        var resultThisMd = minimiser[4] * (Math.tan(child[2 * i + 1].spitch * Math.PI / 180) - Math.tan(child[2 * i].spitch * Math.PI / 180));
+
+        tot += resultThisM
+        tot2 += resultThisM2
+        totd += resultThisMd
+    }
+
+    // console.log(child)
+    var TtoZ = new Array(24.7210645292706, 3.85430803919157, 2.26831429504208, 1.78799800829126, 1.56588077031271, 1.43977787235914, 1.35902263974776, 1.30306304129452, 1.26207205498723, 1.23078550392891, 1.20613845263661, 1.18622896675453, 1.16981585969576, 1.15605543082363, 1.14435451785446, 1.13428412521363, 1.12552641540871, 1.11784096028684, 1.11104256561747, 1.10498629506257, 1.09955710991186, 1.09466254780588, 1.09022745000777, 1.08619009894154, 1.08249934511727, 1.07911244012803, 1.07599338140668, 1.07311163318891, 1.07044112763907, 1.06795947711349);
+    var resl = Math.abs(tot / (child.length / 2))
+
+    var sigmaH1 = Math.sqrt((2 * tot2 / child.length - Math.pow(2 * tot / child.length, 2)));
+
+    var larg = Math.sqrt(Math.pow((minimiser[0] - minimiser[2]), 2) + Math.pow((minimiser[3] - minimiser[1]), 2))
+    var diag = Math.sqrt(Math.pow(resl, 2) + Math.pow(larg, 2));
+    var sigmaH2 = totd;
+
+    var sol = [100 * resl, 100 * TtoZ[child.length / 2 - 2] * (sigmaH1 + sigmaH2) / Math.sqrt(child.length / 2), 100 * larg, 100 * TtoZ[child.length / 2 - 2] * (minimiser[4]) / Math.sqrt(child.length / 2 - 1), 100 * diag]
+    sol.push(Math.sqrt(Math.pow(sol[1] * sol[0] / sol[4], 2) + Math.pow(sol[3] * sol[2] / sol[4], 2)))
+    return sol
+}
+
+
+function solverP_old() {
+
+    var objective = function (params) {
+        var total = 0.0;
+        var cont = 0
+        for (let kk = 0; kk < popupOriginal.document.all.length - 8 - 3 * window._marcadoresPLinhasCount; kk++) {
+            if (popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)]) {
+                cont = cont + 1
+
+                var child1 = rPanorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "P" + String(kk)];
+                var child2 = pPanorama.__gm.panes.overlayLayer.children[pPanorama.getPano() + "P" + String(kk)];
+
+                var P1 = cartesian(rPanorama.position.lat(), rPanorama.position.lng())
+                var P2 = cartesian(pPanorama.position.lat(), pPanorama.position.lng())
+
+                var v = subtract(P2, P1);
+                var pv = [v[0], v[1], 0]
+
+                if (window._marcadoresPLinhasCount > 0) {
+                    pv = scale(pv, 1 / norm(pv, pv));
+                } else {
+                    pv = [0, 0, 0];
+                }
+
+                v = [-v[1], v[0], 0]
+
+                if (norm(v, v) != 0) {
+                    var nv = scale(v, 1 / norm(v, v));
+                } else {
+                    var nv = [0, 0, 0];
+                }
+
+                P1 = [P1[0] + params[0] * pv[0], P1[1] + params[0] * pv[1], 0];
+                P2 = [P2[0] + nv[0] * params[1], P2[1] + nv[1] * params[1], params[2]];
+
+                var v1 = [Math.cos(child1.spitch * Math.PI / 180) * Math.cos(normalizeAngle(90 - child1.sheading) * Math.PI / 180), Math.cos(child1.spitch * Math.PI / 180) * Math.sin(normalizeAngle(90 - child1.sheading) * Math.PI / 180), Math.sin(child1.spitch * Math.PI / 180)];
+                var v2 = [Math.cos(child2.spitch * Math.PI / 180) * Math.cos(normalizeAngle(90 - child2.sheading) * Math.PI / 180), Math.cos(child2.spitch * Math.PI / 180) * Math.sin(normalizeAngle(90 - child2.sheading) * Math.PI / 180), Math.sin(child2.spitch * Math.PI / 180)];
+
+                var resultThisDatum = computeShortestSegment(P1, v1, P2, v2);
+                if (cont + 1 > parseInt(document.querySelector('#input-points input').value) + 1) {
+                    total += Math.pow(resultThisDatum.distance, 2);
+                }
+                popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].Point = resultThisDatum.midpoint;
+
+                popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + String(kk)].err = resultThisDatum.distance / 2;
+
+                rPanorama.__gm.panes.overlayLayer.children[rPanorama.getPano() + "P" + String(kk)].camera = P1;
+                pPanorama.__gm.panes.overlayLayer.children[pPanorama.getPano() + "P" + String(kk)].camera = P2;
+
+                if (cont < parseInt(document.querySelector('#input-points input').value) + 1) {// console.log(kk,resultThisDatum.midpoint,resultThisDatum.distance/2)
+                }
+
+            }
+
+        }
+
+        for (let kk = popupOriginal.document.all.length - 3 * window._marcadoresPLinhasCount; kk < popupOriginal.document.all.length; kk++) {
+
+            var par = popupOriginal.document.all[kk].id.split("&");
+            if (par.length == 2) {
+                if (popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[0]] && popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[1]]) {
+
+                    var I1 = popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[0]].Point
+                    var I2 = popupOriginal.document.all[combineStringsCommutative(rPanorama.getPano(), pPanorama.getPano()) + "Q" + par[1]].Point
+
+                    var distance = norm(subtract(I1, I2));
+                    var reference = parseFloat(popupOriginal.document.all[kk + 2].value) / 100;
+
+                    total += Math.pow(distance - reference, 2);
+
+                }
+            }
+        }
+        return total;
+    };
+
+    var initial = [0, 0, 0]
+    var minimiser = numeric.uncmin(objective, initial)
+    var sol = minimiser;
+
+    dados = [];
+
+    for (kk = 0; kk < popupOriginal.document.all.length - 8 - 3 * window._marcadoresPLinhasCount; kk++) {
+        NameQ = popupOriginal.document.getElementById("image-original").children[kk + 1].IDz;
+        numb = countElementsByIdPrefix(popupOriginal.document, NameQ);
+
+        pano = popupOriginal.document.getElementById("image-original").children[kk + 1].IDz.split("&");
+
+        var loc = popupOriginal.document.getElementById("image-original").children[kk + 1].Point
+        var uu = parseInt(popupOriginal.document.getElementById("image-original").children[kk + 1].style.left) + SVO.markerWidth / 4 - 1
+        var vv = parseInt(popupOriginal.document.getElementById("image-original").children[kk + 1].style.top) + SVO.markerWidth / 4 - 1
+
+        if (rPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)]) {
+            var sh1 = rPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].sheading;
+            var sp1 = rPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].spitch;
+        } else {
+            var sh1 = pPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].sheading;
+            var sp1 = pPanorama.__gm.panes.overlayLayer.children[pano[0] + "P" + String(kk)].spitch;
+        }
+
+        if (rPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)]) {
+            var sh2 = rPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].sheading;
+            var sp2 = rPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].spitch;
+        } else {
+            var sh2 = pPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].sheading;
+            var sp2 = pPanorama.__gm.panes.overlayLayer.children[pano[1] + "P" + String(kk)].spitch;
+        }
+
+        dados = dados + popupOriginal.document.getElementById("image-original").children[kk + 1].IDz + ";" + loc[0] + ";" + loc[1] + ";" + loc[2] + ";" + uu + ";" + vv + ";" + popupOriginal.document.getElementById("image-original").children[kk + 1].err + ";" + sh1 + ";" + sh2 + ";" + sp1 + ";" + sp2 + "\r\n";
+    }
+    return sol
 }
