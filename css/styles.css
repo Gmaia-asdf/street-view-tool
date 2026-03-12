@@ -10,6 +10,7 @@
     float: left;
     height: 100%;
     width: 50%;
+    display: none;
 }
 
 /* Optional: Makes the sample page esfill the window. */
