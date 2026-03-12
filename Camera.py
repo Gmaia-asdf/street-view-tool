@@ -102,7 +102,7 @@ current_win_width = 0
 current_win_height = 0
 
 # Input: valor desejado da PDF da t-Student
-y_target = 1e-2  # Exemplo: defina o valor que desejar
+y_target = 1e-6  # Exemplo: defina o valor que desejar
 
 n_values = np.arange(4, 50)  # n de 2 a 31
 k_values = []
