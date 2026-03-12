@@ -478,12 +478,6 @@ dragElement = function (elmnt) {
         var l_pov = (SVO.panWidth > e.clientX) ? rPanorama.getPov() : pPanorama.getPov();
         var l_zoom = l_pov.zoom;
 
-        var l_adjustedZoom = 45 / Math.pow(
-            1.5 + 0.5 * (1 / (1 + Math.exp((-l_zoom + 1) * 3))),
-            0.85 * (l_zoom - 1)
-        );
-        var l_fovAngle = 1 / Math.tan(l_adjustedZoom * Math.PI / 180);
-
         var l_fovAngle = l_zoom === 0 ? 0.475 : Math.pow(2, l_zoom - 1);
        
         var l_midX = SVO.panWidth  / 2;
