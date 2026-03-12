@@ -60,6 +60,7 @@ var astorPlace = {
 
 async function initMap() {
     // Set up the map
+
     const { Map } = await google.maps.importLibrary("maps");
     const { PlacesService } = await google.maps.importLibrary("places");
     const { encoding } = await google.maps.importLibrary("geometry");
@@ -95,7 +96,7 @@ async function initMap() {
             }]
         },]
     });
-    document.getElementById('rMap').style.width = '50%'
+    document.getElementById('rMap').style.width = '100%'
 
 
     //  const advancedMarker = new AdvancedMarkerElement({
@@ -131,6 +132,7 @@ async function initMap() {
         },]
 
     });
+    
 
     rMap.data.setStyle(function (feature) {
         if (feature.getProperty('radius') && feature.getGeometry().getType() === 'Point') {
@@ -160,7 +162,7 @@ async function initMap() {
         disableDefaultUI: true,
         linksControl: true,
         panControl: false,
-        clickToGo: false,
+        clickToGo: true,
         enableCloseButton: true,
         imageDateControl: true,
         disableKeyboardShortcuts: true,
@@ -180,15 +182,15 @@ async function initMap() {
     pPanorama.setOptions({
         linksControl:true,
         panControl: true,
-        clickToGo: false,
+        clickToGo: true,
         disableDefaultUI: true,
-        enableCloseButton: true,
+        enableCloseButton: false,
         imageDateControl: true,
         disableDefaultUI: true,
         zoomControlOptions: true,
         zoomOptions: false,
     });
-    pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-point'));
+   // pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-point'));
 
     pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('floating-point2'));
     pPanorama.controls[google.maps.ControlPosition.TOP_LEFT].push(document.getElementById('input-points'));
@@ -200,7 +202,7 @@ async function initMap() {
     rPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('floating-ruler2'));
     pPanorama.controls[google.maps.ControlPosition.RIGHT_TOP].push(document.getElementById('floating-rulerC'));
 
-    rPanorama.controls[google.maps.ControlPosition.TOP_RIGHT].push(document.getElementById('floating-pair'));
+    //rPanorama.controls[google.maps.ControlPosition.TOP_RIGHT].push(document.getElementById('floating-pair'));
     pPanorama.controls[google.maps.ControlPosition.TOP_RIGHT].push(document.getElementById('floating-pairC'));
 
     rPanorama.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('floating-twoScreens1'));
@@ -211,9 +213,11 @@ async function initMap() {
 
     rPanorama.addListener('visible_changed', function () {
     setTimeout(() => {
-        if (!rPanorama.getVisible()) {
+        if (!this.getVisible()) {
         setMapOnAll(rMap, CheckPoints);
-        
+        document.getElementById('rMap').style.width = '100%'
+        document.getElementById('pMap').style.display = 'none'
+
     } else {
        setMapOnAll(null, CheckPoints); 
     }
